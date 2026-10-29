@@ -112,6 +112,51 @@ local function haveOfferRook(id)
 	return nil
 end
 
+-- XP Boost: compras por periodo entre guardados globales (globalServerSaveTime, hora local).
+-- Un solo lugar para el precio y el limite, usado al mostrar, validar y cobrar.
+local function getExpBoostPeriod()
+	local saveTime = configManager.getString(configKeys.GLOBAL_SERVER_SAVE_TIME) or "06:00:00"
+	local hour, minute = saveTime:match("^(%d+):(%d+)")
+	local offset = (tonumber(hour) or 6) * 3600 + (tonumber(minute) or 0) * 60
+	local now = os.date("*t")
+	local midnight = os.time({ year = now.year, month = now.month, day = now.day, hour = 0, min = 0, sec = 0 })
+	local secondsToday = now.hour * 3600 + now.min * 60 + now.sec
+	if secondsToday < offset then
+		midnight = midnight - 86400
+	end
+	return math.floor(midnight / 86400)
+end
+
+local function getExpBoostPriceTable()
+	return GameStore.ExpBoostValuesCustom or GameStore.ExpBoostValues
+end
+
+-- Compras de XP Boost hechas en el periodo actual (0..limite); al cambiar de periodo vuelve a 0
+local function getExpBoostPurchases(player)
+	local playerKV = player:kv()
+	local period = getExpBoostPeriod()
+	if tonumber(playerKV:get("exp-boost-period")) ~= period then
+		playerKV:set("exp-boost-period", period)
+		playerKV:set(GameStore.Kv.expBoostCount, 0)
+		return 0
+	end
+	return tonumber(playerKV:get(GameStore.Kv.expBoostCount)) or 0
+end
+
+local function getExpBoostLimit()
+	return #getExpBoostPriceTable()
+end
+
+-- Precio de la proxima compra, o nil si ya se alcanzo el limite del periodo
+local function getExpBoostPrice(player)
+	return getExpBoostPriceTable()[getExpBoostPurchases(player) + 1]
+end
+
+local function registerExpBoostPurchase(player)
+	local purchases = getExpBoostPurchases(player)
+	player:kv():set(GameStore.Kv.expBoostCount, purchases + 1)
+end
+
 -- Precio final para el jugador: aplica el descuento VIP a las ofertas marcadas con vipDiscount.
 -- Se usa al mostrar Y al cobrar, para que ambos coincidan siempre.
 local function applyVipDiscount(player, offer, price)
@@ -384,6 +429,10 @@ store.haveCategoryRook = haveCategoryRook
 store.haveOfferRook = haveOfferRook
 store.insertHistory = insertHistory
 store.applyVipDiscount = applyVipDiscount
+store.getExpBoostPurchases = getExpBoostPurchases
+store.getExpBoostLimit = getExpBoostLimit
+store.getExpBoostPrice = getExpBoostPrice
+store.registerExpBoostPurchase = registerExpBoostPurchase
 store.retrieveHistoryTotalPages = retrieveHistoryTotalPages
 store.retrieveHistoryEntries = retrieveHistoryEntries
 store.getDefaultDescription = getDefaultDescription

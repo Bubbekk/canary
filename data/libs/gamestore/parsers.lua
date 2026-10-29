@@ -294,8 +294,7 @@ local function parseBuyStoreOffer(playerId, msg)
 	end
 
 	-- At this point the purchase is assumed to be formatted correctly
-	local purchaseExpCount = playerKV:get(GameStore.Kv.expBoostCount) or 0
-	local offerPrice = offer.type == GameStore.OfferTypes.OFFER_TYPE_EXPBOOST and GameStore.ExpBoostValues[purchaseExpCount] or offer.price
+	local offerPrice = offer.type == GameStore.OfferTypes.OFFER_TYPE_EXPBOOST and (GameStore.getExpBoostPrice(player) or 0xFFFF) or offer.price
 	local offerCoinType = offer.coinType
 	if offer.type == GameStore.OfferTypes.OFFER_TYPE_NAMECHANGE and player:kv():get("namelock") then
 		offerPrice = 0
@@ -317,6 +316,9 @@ local function parseBuyStoreOffer(playerId, msg)
 			configuredByte = msg:getByte()
 		end
 
+		if offer.type == GameStore.OfferTypes.OFFER_TYPE_ITEM_UNIQUE and player:getItemById(offer.itemtype, true) then
+			return error({ code = 1, message = "You already have a " .. ItemType(offer.itemtype):getName() .. "." })
+		end
 		if offer.type == GameStore.OfferTypes.OFFER_TYPE_ITEM or offer.type == GameStore.OfferTypes.OFFER_TYPE_ITEM_UNIQUE then
 			GameStore.processItemPurchase(player, offer.itemtype, offer.count or 1, offer.movable, offer.setOwner)
 		elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_INSTANT_REWARD_ACCESS then

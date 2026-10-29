@@ -121,9 +121,7 @@ local function canBuyOffer(self, offer)
 				disabledReason = "You already have 3 slots released."
 			end
 		elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_EXPBOOST then
-			local playerKV = self:kv()
-			local purchaseExpCount = playerKV:get(GameStore.Kv.expBoostCount) or 0
-			if purchaseExpCount == GameStore.ItemLimit.EXPBOOST then
+			if GameStore.getExpBoostPurchases(self) >= GameStore.getExpBoostLimit() then
 				disabled = 1
 				disabledReason = "You can't buy XP Boost for today."
 			end
@@ -268,22 +266,17 @@ local function makeCoinTransaction(self, offer, desc)
 	end
 
 	local isExpBoost = offer.type == GameStore.OfferTypes.OFFER_TYPE_EXPBOOST
+	-- XP Boost: precio segun las compras del periodo (sin modificar offer.price, que es compartido)
+	local basePrice = offer.price
 	if isExpBoost then
-		local playerKV = self:kv()
-		local expBoostCount = tonumber(playerKV:get(GameStore.Kv.expBoostCount)) or 0
-		if expBoostCount <= 0 or expBoostCount > 5 then
-			expBoostCount = 1
+		basePrice = GameStore.getExpBoostPrice(self)
+		if not basePrice then
+			return false
 		end
-		local priceTable = GameStore.ExpBoostValues
-		if GameStore.ExpBoostValuesCustom then
-			priceTable = GameStore.ExpBoostValuesCustom
-		end
-		offer.price = priceTable[expBoostCount] or priceTable[1]
-		playerKV:set(GameStore.Kv.expBoostCount, expBoostCount + 1)
 	end
 
 	-- Precio final (con descuento VIP si corresponde); el mismo que se muestra en la tienda
-	local price = GameStore.applyVipDiscount(self, offer, offer.price)
+	local price = GameStore.applyVipDiscount(self, offer, basePrice)
 
 	-- Ofertas gratuitas: no hay monedas que descontar, solo se registra en el historial
 	if not isExpBoost and (price or 0) == 0 then
@@ -299,6 +292,9 @@ local function makeCoinTransaction(self, offer, desc)
 
 	if op then
 		GameStore.insertHistory(self:getAccountId(), GameStore.HistoryTypes.HISTORY_TYPE_NONE, desc, price * -1, offer.coinType)
+		if isExpBoost then
+			GameStore.registerExpBoostPurchase(self)
+		end
 	end
 
 	return op

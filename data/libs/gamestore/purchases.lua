@@ -75,6 +75,9 @@ local function processInstantRewardAccess(player, offerCount)
 end
 
 local function processCharmsPurchase(player)
+	if player:charmExpansion() then
+		return error({ code = 1, message = "You already have charm expansion." })
+	end
 	player:charmExpansion(true)
 end
 
@@ -313,6 +316,13 @@ local function processSexChangePurchase(player)
 end
 
 local function processExpBoostPurchase(player)
+	-- Validaciones en el servidor (antes solo las hacia la interfaz)
+	if player:getXpBoostTime() > 0 then
+		return error({ code = 1, message = "You already have an active XP boost." })
+	end
+	if GameStore.getExpBoostPurchases(player) >= GameStore.getExpBoostLimit() then
+		return error({ code = 1, message = "You can't buy XP Boost for today." })
+	end
 	local currentXpBoostTime = player:getXpBoostTime()
 	player:setXpBoostPercent(50)
 	player:setXpBoostTime(currentXpBoostTime + 3600)
@@ -345,6 +355,17 @@ local function processTempleTeleportPurchase(player)
 	local inFight = player:isPzLocked() or player:getCondition(CONDITION_INFIGHT, CONDITIONID_DEFAULT)
 	if not inPz and inFight then
 		return error({ code = 0, message = "You can't use temple teleport in fight!" })
+	end
+
+	-- Lo que promete la descripcion de la Tienda: no funciona en zonas sin cierre de sesion
+	-- (salas de jefes, misiones) ni cerca del templo del personaje.
+	if player:getTile():hasFlag(TILESTATE_NOLOGOUT) then
+		return error({ code = 0, message = "You can't use temple teleport in a no-logout zone." })
+	end
+	local temple = player:getTown():getTemplePosition()
+	local position = player:getPosition()
+	if position.z == temple.z and math.max(math.abs(position.x - temple.x), math.abs(position.y - temple.y)) <= 10 then
+		return error({ code = 0, message = "You are already close to your home temple." })
 	end
 
 	player:teleportTo(player:getTown():getTemplePosition())
