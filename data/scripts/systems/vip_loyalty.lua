@@ -141,8 +141,10 @@ local function processPlayer(player, isLogin)
 
 	if isLogin then
 		local nextChest = config.chestEveryDays - (row.vipDays % config.chestEveryDays)
+		local vipDays = player:getVipDays()
+		local remainingText = vipDays >= 1 and string.format("%d d\237a(s)", vipDays) or "menos de 1 d\237a"
 		local lines = {
-			string.format("[VIP] \161Bienvenido, %s! Tu cuenta es VIP: te quedan %d d\237as.", player:getName(), player:getVipDays()),
+			string.format("[VIP] \161Bienvenido, %s! Tu cuenta es VIP: te queda(n) %s.", player:getName(), remainingText),
 			string.format("[VIP] D\237as VIP acumulados: %d. Pr\243ximo cofre VIP en %d d\237a(s).", row.vipDays, nextChest),
 		}
 		if row.vipDays < config.exclusiveMountDays then
