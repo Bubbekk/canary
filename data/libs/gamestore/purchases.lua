@@ -208,7 +208,7 @@ local function processHouseRelatedPurchase(player, offer)
 			if isCaskItem(itemId) then
 				local decoKit = inbox:addItem(ITEM_DECORATION_KIT, 1)
 				if decoKit then
-					decoKit:setAttribute(ITEM_ATTRIBUTE_DESCRIPTION, "You bought this item in the Store.\nUnwrap it in your own house to create a <" .. ItemType(itemId):getName() .. ">.")
+					decoKit:setAttribute(ITEM_ATTRIBUTE_DESCRIPTION, "Compraste este objeto en la Tienda.\nDesenvu\233lvelo en tu propia casa para crear: <" .. ItemType(itemId):getName() .. ">.")
 					decoKit:setCustomAttribute("unWrapId", itemId)
 					decoKit:setAttribute(ITEM_ATTRIBUTE_DATE, offer.count)
 
@@ -220,7 +220,7 @@ local function processHouseRelatedPurchase(player, offer)
 				for i = 1, offer.count do
 					local decoKit = inbox:addItem(ITEM_DECORATION_KIT, 1)
 					if decoKit then
-						decoKit:setAttribute(ITEM_ATTRIBUTE_DESCRIPTION, "You bought this item in the Store.\nUnwrap it in your own house to create a <" .. ItemType(itemId):getName() .. ">.")
+						decoKit:setAttribute(ITEM_ATTRIBUTE_DESCRIPTION, "Compraste este objeto en la Tienda.\nDesenvu\233lvelo en tu propia casa para crear: <" .. ItemType(itemId):getName() .. ">.")
 						decoKit:setCustomAttribute("unWrapId", itemId)
 
 						if not offer.movable then
