@@ -1,4 +1,5 @@
 local exhaustionTime = 10
+local VIP_EXERCISE_SPEED = 10 -- las cuentas VIP entrenan x10 más rápido con armas de entrenamiento
 
 local exerciseWeaponsTable = {
 	-- MELE
@@ -135,6 +136,12 @@ local function exerciseTrainingEvent(playerId, tilePosition, weaponId, dummyId)
 	if scopedFastExercise then
 		eventSpeedMultiplier = 0.5
 		logger.debug("Fast exercise is enabled.")
+	end
+
+	-- VIP: entrena más rápido (más golpes por segundo). Cada golpe sigue gastando 1 carga,
+	-- así que el arma da el mismo skill total: el VIP ahorra tiempo, no armas.
+	if configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) and player:isVip() then
+		eventSpeedMultiplier = eventSpeedMultiplier / VIP_EXERCISE_SPEED
 	end
 
 	local vocation = player:getVocation()

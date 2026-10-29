@@ -48,6 +48,7 @@ if configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) then
 	premiumDescription = premiumDescription .. "&#8226; exclusive VIP daily rewards in the reward wall\n"
 	premiumDescription = premiumDescription .. "&#8226; access to the Wheel of Destiny\n"
 	premiumDescription = premiumDescription .. "&#8226; +1 forge dust from influenced and fiendish creatures\n"
+	premiumDescription = premiumDescription .. "&#8226; exercise weapon training 10x faster\n"
 	premiumDescription = premiumDescription .. "\n{usablebyallicon} valid for all characters on this account\n{activated}"
 end
 
