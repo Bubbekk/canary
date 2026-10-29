@@ -30,7 +30,9 @@ void SaveManager::saveAll() {
 	logger.info("Saving server...");
 	Benchmark bm_players;
 	const auto &players = game.getPlayers();
-	const bool savePlayersInParallel = threadPool.get_thread_count() > 1 && players.size() > 1;
+	// On Windows, closing the console shuts the thread pool down from the signal thread while this save runs
+	// on the dispatcher; using the pool then crashed the server and the final save was lost. Save serially.
+	const bool savePlayersInParallel = !threadPool.isStopped() && threadPool.get_thread_count() > 1 && players.size() > 1;
 	std::vector<std::pair<std::future<void>, std::string>> pending;
 	logger.info("Saving {} players...", players.size());
 	if (savePlayersInParallel) {

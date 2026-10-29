@@ -43,7 +43,8 @@ public:
 	}
 
 	auto get_thread_count() const noexcept {
-		return pool->get_thread_count();
+		// The pool is reset during shutdown while the dispatcher may still be saving the server
+		return pool ? pool->get_thread_count() : decltype(pool->get_thread_count()) { 0 };
 	}
 
 	static void setCurrentThreadName(std::string_view name) noexcept;
