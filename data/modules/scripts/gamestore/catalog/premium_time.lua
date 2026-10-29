@@ -42,6 +42,7 @@ if configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) then
 	premiumDescription = premiumDescription .. "&#8226; +50% daily reward\n"
 	premiumDescription = premiumDescription .. "&#8226; " .. GameStore.VIP_STORE_DISCOUNT_PERCENT .. "% discount on consumables in the Store\n"
 	premiumDescription = premiumDescription .. "&#8226; more Tibia Coins for being online\n"
+	premiumDescription = premiumDescription .. "&#8226; no daily limit on XP Boost purchases\n"
 	premiumDescription = premiumDescription .. "\n{usablebyallicon} valid for all characters on this account\n{activated}"
 end
 

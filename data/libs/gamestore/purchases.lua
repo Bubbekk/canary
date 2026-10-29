@@ -320,7 +320,7 @@ local function processExpBoostPurchase(player)
 	if player:getXpBoostTime() > 0 then
 		return error({ code = 1, message = "You already have an active XP boost." })
 	end
-	if GameStore.getExpBoostPurchases(player) >= GameStore.getExpBoostLimit() then
+	if GameStore.getExpBoostPurchases(player) >= GameStore.getExpBoostLimit(player) then
 		return error({ code = 1, message = "You can't buy XP Boost for today." })
 	end
 	local currentXpBoostTime = player:getXpBoostTime()

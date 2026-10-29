@@ -143,13 +143,27 @@ local function getExpBoostPurchases(player)
 	return tonumber(playerKV:get(GameStore.Kv.expBoostCount)) or 0
 end
 
-local function getExpBoostLimit()
+-- Las cuentas VIP no tienen limite diario de compras
+local function hasUnlimitedExpBoost(player)
+	return player ~= nil and configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) and player:isVip()
+end
+
+local function getExpBoostLimit(player)
+	if hasUnlimitedExpBoost(player) then
+		return math.huge
+	end
 	return #getExpBoostPriceTable()
 end
 
--- Precio de la proxima compra, o nil si ya se alcanzo el limite del periodo
+-- Precio de la proxima compra, o nil si ya se alcanzo el limite del periodo.
+-- Para VIP, pasado el ultimo escalon el precio se mantiene en el ultimo valor de la tabla.
 local function getExpBoostPrice(player)
-	return getExpBoostPriceTable()[getExpBoostPurchases(player) + 1]
+	local priceTable = getExpBoostPriceTable()
+	local nextPurchase = getExpBoostPurchases(player) + 1
+	if hasUnlimitedExpBoost(player) then
+		nextPurchase = math.min(nextPurchase, #priceTable)
+	end
+	return priceTable[nextPurchase]
 end
 
 local function registerExpBoostPurchase(player)

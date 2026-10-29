@@ -121,7 +121,7 @@ local function canBuyOffer(self, offer)
 				disabledReason = "You already have 3 slots released."
 			end
 		elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_EXPBOOST then
-			if GameStore.getExpBoostPurchases(self) >= GameStore.getExpBoostLimit() then
+			if GameStore.getExpBoostPurchases(self) >= GameStore.getExpBoostLimit(self) then
 				disabled = 1
 				disabledReason = "You can't buy XP Boost for today."
 			end
