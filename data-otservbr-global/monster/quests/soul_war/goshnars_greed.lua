@@ -15,6 +15,7 @@ monster.outfit = {
 
 monster.events = {
 	"SoulWarBossesDeath",
+	"GoshnarsGreedImmunity",
 }
 
 monster.health = 300000

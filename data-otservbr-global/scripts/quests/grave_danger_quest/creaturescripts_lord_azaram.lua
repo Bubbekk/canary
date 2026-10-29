@@ -18,6 +18,12 @@ local config = {
 	toPos = Position(33433, 31481, 13),
 }
 
+-- Monsters have no storage values (only players do): calling them raised an error on every hit, so
+-- Azaram's soul mechanic never ran and only the summons happened (#3506). Track the values here instead.
+local damageTaken = {}
+local healSteps = {}
+local MAX_CONDENSED_SINS = 8
+
 local function removeTainted()
 	local spectators = Game.getSpectators(config.centerRoom, false, false, config.x, config.x, config.y, config.y)
 	for _, creature in pairs(spectators) do
@@ -47,19 +53,15 @@ function azaram_health.onHealthChange(creature, attacker, primaryDamage, primary
 		return primaryDamage, primaryType, secondaryDamage, secondaryType
 	end
 	local health = creature:getMaxHealth() * 0.10
-	local damageStorage = creature:getStorageValue(1)
-	if damageStorage == -1 then
-		creature:setStorageValue(1, 0)
-	end
-
-	creature:setStorageValue(1, damageStorage + primaryDamage)
-	local stor = creature:getStorageValue(1)
+	local creatureId = creature:getId()
+	damageTaken[creatureId] = (damageTaken[creatureId] or 0) + primaryDamage
+	local stor = damageTaken[creatureId]
 	if stor >= health then
 		local bossTile = Tile(config.bossPos)
 		if bossTile and bossTile:isWalkable() then
 			creature:teleportTo(config.bossPos)
 		end
-		creature:setStorageValue(1, 0)
+		damageTaken[creatureId] = 0
 		local soul = Creature("Azaram's Soul")
 		if soul then
 			soul:teleportTo(config.centerRoom)
@@ -68,7 +70,7 @@ function azaram_health.onHealthChange(creature, attacker, primaryDamage, primary
 			end
 		end
 	end
-	return primaryDamage, primaryType, -secondaryDamage, secondaryType
+	return primaryDamage, primaryType, secondaryDamage, secondaryType
 end
 
 azaram_health:register()
@@ -81,6 +83,16 @@ function azaram_summon.onHealthChange(creature, attacker, primaryDamage, primary
 	end
 	local chance = math.random(1, 100)
 	if chance < 90 then
+		return primaryDamage, primaryType, secondaryDamage, secondaryType
+	end
+
+	local sins = 0
+	for _, spectator in ipairs(Game.getSpectators(config.centerRoom, false, false, config.x, config.x, config.y, config.y)) do
+		if spectator:isMonster() and spectator:getName():lower() == "condensed sin" then
+			sins = sins + 1
+		end
+	end
+	if sins >= MAX_CONDENSED_SINS then
 		return primaryDamage, primaryType, secondaryDamage, secondaryType
 	end
 
@@ -97,7 +109,7 @@ function azaram_summon.onHealthChange(creature, attacker, primaryDamage, primary
 			Game.createMonster("Condensed Sin", position, false, true)
 		end
 	end
-	return primaryDamage, primaryType, -secondaryDamage, secondaryType
+	return primaryDamage, primaryType, secondaryDamage, secondaryType
 end
 
 azaram_summon:register()
@@ -110,13 +122,10 @@ function soul_heal.onHealthChange(creature, attacker, primaryDamage, primaryType
 	end
 	if primaryType == COMBAT_HEALING then
 		local health = (creature:getHealth() / creature:getMaxHealth()) * 100
-		local healStorage = creature:getStorageValue(2)
-		if healStorage == -1 then
-			creature:setStorageValue(2, 0)
-		end
+		local healStorage = healSteps[creature:getId()] or 0
 
 		if health < 100 and health >= healStorage * 15 then
-			creature:setStorageValue(2, healStorage + 1)
+			healSteps[creature:getId()] = healStorage + 1
 			if config.soulPos:isWalkable() then
 				creature:teleportTo(config.soulPos)
 			end
@@ -127,7 +136,7 @@ function soul_heal.onHealthChange(creature, attacker, primaryDamage, primaryType
 			end
 		end
 	end
-	return primaryDamage, primaryType, -secondaryDamage, secondaryType
+	return primaryDamage, primaryType, secondaryDamage, secondaryType
 end
 
 soul_heal:register()

@@ -425,6 +425,9 @@ SoulWarQuest = {
 				player:resetGoshnarSymbolTormentCounter()
 				SoulWarQuest.kvSoulWar:remove("cleansed-sanity-action")
 				player:soulWarQuestKV():scoped("furious-crater"):remove("cleansed-sanity-action")
+				-- The Aspect of Power counter is stored per boss name and survived between fights, so a
+				-- leftover count made Megalomania vulnerable after a single kill (#3500)
+				SoulWarQuest.kvSoulWar:scoped("monster"):scoped("Goshnar's Megalomania"):remove("aspect-of-power-death-count")
 			end,
 		},
 	},
@@ -927,9 +930,13 @@ function CreateGoshnarsGreedMonster(name, position)
 	addEvent(spawnMonster, 10000)
 end
 
-function RemoveSoulCageAndBuffMalice()
+-- Each Soul Cage gets its own id: the 40 s "fail" timer of a cage the players already killed must not
+-- remove the next cage and buff Malice (#3500)
+local soulCageId = nil
+
+function RemoveSoulCageAndBuffMalice(cageId)
 	local soulCage = Creature("Soul Cage")
-	if soulCage then
+	if soulCage and (cageId == nil or soulCage:getId() == cageId) then
 		soulCage:remove()
 		addEvent(SpawnSoulCage, 23000)
 		local malice = Creature("Goshnar's Malice")
@@ -948,9 +955,12 @@ function SpawnSoulCage()
 	local creatures = tile:getCreatures() or {}
 	local soulCage = Creature("Soul Cage")
 	if not soulCage then
-		Game.createMonster("Soul Cage", SoulCagePosition, true, true)
+		local cage = Game.createMonster("Soul Cage", SoulCagePosition, true, true)
 		logger.trace("Spawning Soul Cage in position {}", SoulCagePosition:toString())
-		addEvent(RemoveSoulCageAndBuffMalice, 40000)
+		if cage then
+			soulCageId = cage:getId()
+			addEvent(RemoveSoulCageAndBuffMalice, 40000, soulCageId)
+		end
 	end
 end
 
@@ -1348,7 +1358,7 @@ local damageTable = {
 	5600,
 }
 
-function Monster:onThinkGoshnarTormentCounter(interval, maxLimit, intervalBetweenExecutions, bossPosition)
+function Monster:onThinkGoshnarTormentCounter(interval, maxLimit, intervalBetweenExecutions, bossPosition, bossName)
 	local interval = os.time() * 1000
 	if interval - lastExecutionTime < intervalBetweenExecutions then
 		return

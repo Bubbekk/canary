@@ -14,6 +14,22 @@ local config = {
 	room = Storage.Quest.U12_20.GraveDanger.Bosses.CountVlarkorth.Room,
 }
 
+-- Monsters have no storage values (only players do): the old code raised an error on every hit, so the
+-- boss never summoned its darks and was a punching bag (#3506). Damage is tracked here, and the boss is
+-- shielded while any of its darks is alive.
+local damageTaken = {}
+local darkNames = { ["dark sorcerer"] = true, ["dark druid"] = true, ["dark paladin"] = true, ["dark knight"] = true }
+
+local function countDarks()
+	local darks = 0
+	for _, spectator in ipairs(Game.getSpectators(config.centerRoom, false, false, config.x, config.x, config.y, config.y)) do
+		if spectator:isMonster() and darkNames[spectator:getName():lower()] then
+			darks = darks + 1
+		end
+	end
+	return darks
+end
+
 local function summonDarks()
 	local spectators = Game.getSpectators(config.centerRoom, false, true, config.x, config.x, config.y, config.y)
 	local boss = Creature("Count Vlarkorth")
@@ -28,11 +44,7 @@ local function summonDarks()
 			if toSummon then
 				local newPosition = boss:getClosestFreePosition(boss:getPosition(), true)
 				if newPosition then
-					local dark = Game.createMonster(toSummon.summon, newPosition, false, true)
-					if dark then
-						local summonCount = boss:getStorageValue(3)
-						boss:setStorageValue(3, math.max(0, summonCount) + 1)
-					end
+					Game.createMonster(toSummon.summon, newPosition, false, true)
 				end
 			end
 		end
@@ -58,7 +70,7 @@ function count_vlarkorth_transform.onHealthChange(creature, attacker, primaryDam
 	end
 
 	if primaryType == COMBAT_HEALING then
-		return primaryDamage, primaryType, -secondaryDamage, secondaryType
+		return primaryDamage, primaryType, secondaryDamage, secondaryType
 	end
 
 	if not creature then
@@ -66,26 +78,19 @@ function count_vlarkorth_transform.onHealthChange(creature, attacker, primaryDam
 	end
 
 	local health = creature:getMaxHealth() * 0.15
-	local damageStorage = creature:getStorageValue(1)
-	if damageStorage < 0 then
-		creature:setStorageValue(1, 0)
-		damageStorage = 0
-	end
-
-	if creature:getStorageValue(3) > 0 then
+	if countDarks() > 0 then
 		creature:getPosition():sendMagicEffect(CONST_ME_BLOCKHIT)
-		return primaryDamage, primaryType, secondaryDamage, secondaryType
+		return 0, primaryType, 0, secondaryType
 	end
 
-	creature:setStorageValue(1, damageStorage + primaryDamage + secondaryDamage)
-
-	if creature:getStorageValue(1) >= health then
-		creature:setStorageValue(1, 0)
-		creature:setStorageValue(3, 0)
+	local creatureId = creature:getId()
+	damageTaken[creatureId] = (damageTaken[creatureId] or 0) + primaryDamage + secondaryDamage
+	if damageTaken[creatureId] >= health then
+		damageTaken[creatureId] = 0
 		summonDarks()
 	end
 
-	return primaryDamage, primaryType, -secondaryDamage, secondaryType
+	return primaryDamage, primaryType, secondaryDamage, secondaryType
 end
 
 count_vlarkorth_transform:register()

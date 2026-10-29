@@ -42,6 +42,9 @@ local entrancesTiles = {
 }
 
 local zone = Zone("boss." .. toKey(config.bossName))
+-- The map does not tag the lair with this zone, so the encounter never saw players enter and the
+-- boss never spawned (#3479). The area lies between the entrance tiles listed below.
+zone:addArea({ x = 31938, y = 32312, z = 10 }, { x = 31968, y = 32338, z = 10 })
 local encounter = Encounter("Brain Head", {
 	zone = zone,
 	timeToSpawnMonsters = "50ms",

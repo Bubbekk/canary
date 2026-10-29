@@ -73,10 +73,12 @@ local function startBattle(pid, position, b_name, middle)
 end
 
 local function resetRoom(position, name)
-	local spec = Game.getSpectators(position, false, false, 5, 5, 5, 5)
+	local spec = Game.getSpectators(position, false, false, 10, 10, 7, 7)
 
+	-- Check the whole arena (fromPos..toPos), not just 5 tiles around the scorpion: a fighter standing
+	-- at either end went unnoticed and the next player reset the running fight (#3259)
 	for _, c in pairs(spec) do
-		if c and c:isPlayer() then
+		if c and c:isPlayer() and c:getPosition():isInRange(fromPos, toPos) then
 			return false
 		end
 	end

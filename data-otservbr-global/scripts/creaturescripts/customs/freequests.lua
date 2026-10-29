@@ -380,7 +380,9 @@ local function playerFreeQuestStart(playerId, index)
 		end
 
 		local questData = questTable[index]
-		local currentStorageValue = player:getStorageValue(questData.storage)
+		-- Check the storage before reading it: reading a nil storage raised an error that stopped
+		-- every quest after it from being added (#3478)
+		local currentStorageValue = questData.storage and player:getStorageValue(questData.storage)
 
 		if not questData.storage then
 			logger.warn("[Freequest System]: error storage for '" .. questData.storageName .. "' is nil for the index")

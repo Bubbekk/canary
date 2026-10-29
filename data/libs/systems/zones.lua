@@ -43,10 +43,17 @@ function Zone:sendTextMessage(...)
 	end
 end
 
+-- Player summons (utevo res, familiars...) are not part of an encounter: counting them kept
+-- "kill all monsters" stages, such as Soulpit waves, from ever advancing (#3458).
+local function isPlayerSummon(monster)
+	local master = monster:getMaster()
+	return master ~= nil and master:isPlayer()
+end
+
 function Zone:countMonsters(name)
 	local count = 0
 	for _, monster in ipairs(self:getMonsters()) do
-		if not name or monster:getName():lower() == name:lower() then
+		if not isPlayerSummon(monster) and (not name or monster:getName():lower() == name:lower()) then
 			count = count + 1
 		end
 	end

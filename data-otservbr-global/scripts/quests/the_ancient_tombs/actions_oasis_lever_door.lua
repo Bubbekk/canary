@@ -37,6 +37,15 @@ function theAncientOasisLever.onUse(player, item, fromPosition, target, toPositi
 		if doorItem then
 			doorItem:transform(1663)
 		end
+
+		-- 1662/1663 is a quest door: stepping in requires the storage named by its action id (12107).
+		-- Without it the player was pushed back even with the door open (#3453). Grant it to the
+		-- players at the lever; the door itself still only opens through this lever.
+		for _, spectator in ipairs(Game.getSpectators(player:getPosition(), false, true, 7, 7, 7, 7)) do
+			if spectator:getStorageValue(item.actionid) == -1 then
+				spectator:setStorageValue(item.actionid, 1)
+			end
+		end
 		return true
 	end
 

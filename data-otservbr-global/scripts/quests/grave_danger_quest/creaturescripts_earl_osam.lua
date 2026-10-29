@@ -16,12 +16,27 @@ local config = {
 	},
 }
 
+-- Monsters have no storage values (only players do): the old calls raised an error on every hit, so
+-- the sphere and shield mechanics never ran (#3506). These keep the same values per monster in memory.
+local monsterValues = {}
+
+local function getMonsterValue(monster, key)
+	local values = monsterValues[monster:getId()]
+	return values and values[key] or -1
+end
+
+local function setMonsterValue(monster, key, value)
+	local id = monster:getId()
+	monsterValues[id] = monsterValues[id] or {}
+	monsterValues[id][key] = value
+end
+
 local function moveSphere()
 	local spectators = Game.getSpectators(config.centerRoom, false, false, config.x, config.x, config.y, config.y)
 	local nextPos = nil
 	local boss = Creature("Earl Osam")
 
-	if boss and boss:getStorageValue(3) > 0 then
+	if boss and getMonsterValue(boss, 3) > 0 then
 		for _, spheres in pairs(spectators) do
 			if spheres:isMonster() and spheres:getName():lower() == "magical sphere" then
 				local pos = spheres:getPosition()
@@ -48,7 +63,7 @@ local function moveSphere()
 							if nextPos == config.centerRoom and nextCreature:getName():lower() == "earl osam" then
 								spheres:remove()
 								nextCreature:addHealth(80000)
-								nextCreature:setStorageValue(3, nextCreature:getStorageValue(3) - 1)
+								setMonsterValue(nextCreature, 3, getMonsterValue(nextCreature, 3) - 1)
 								if nextCreature:isMoveLocked() then
 									nextCreature:setMoveLocked(false)
 								end
@@ -85,7 +100,7 @@ local function initMech()
 		for _, sphereSpot in pairs(config.spheres) do
 			local sphere = Game.createMonster("Magical Sphere", sphereSpot, false, true)
 			if sphere then
-				boss:setStorageValue(3, math.max(0, boss:getStorageValue(3)) + 1)
+				setMonsterValue(boss, 3, math.max(0, getMonsterValue(boss, 3)) + 1)
 			end
 		end
 
@@ -111,7 +126,7 @@ function earl_osam_transform.onHealthChange(creature, attacker, primaryDamage, p
 	end
 
 	if primaryType == COMBAT_HEALING then
-		return primaryDamage, primaryType, -secondaryDamage, secondaryType
+		return primaryDamage, primaryType, secondaryDamage, secondaryType
 	end
 
 	local chance = math.random(1, 100)
@@ -123,25 +138,25 @@ function earl_osam_transform.onHealthChange(creature, attacker, primaryDamage, p
 	end
 
 	local healthThreshold = creature:getMaxHealth() * 0.15
-	local currentDamage = creature:getStorageValue(1)
+	local currentDamage = getMonsterValue(creature, 1)
 	if currentDamage < 0 then
-		creature:setStorageValue(1, 0)
+		setMonsterValue(creature, 1, 0)
 	end
 
-	if creature:getStorageValue(3) > 0 then
+	if getMonsterValue(creature, 3) > 0 then
 		creature:getPosition():sendMagicEffect(CONST_ME_BLOCKHIT)
 		return primaryDamage, primaryType, secondaryDamage, secondaryType
 	end
 
-	creature:setStorageValue(1, currentDamage + primaryDamage + secondaryDamage)
+	setMonsterValue(creature, 1, currentDamage + primaryDamage + secondaryDamage)
 
-	if creature:getStorageValue(1) >= healthThreshold then
-		creature:setStorageValue(1, 0)
-		creature:setStorageValue(3, 0)
+	if getMonsterValue(creature, 1) >= healthThreshold then
+		setMonsterValue(creature, 1, 0)
+		setMonsterValue(creature, 3, 0)
 		initMech()
 	end
 
-	return primaryDamage, primaryType, -secondaryDamage, secondaryType
+	return primaryDamage, primaryType, secondaryDamage, secondaryType
 end
 
 earl_osam_transform:register()
@@ -151,9 +166,9 @@ local sphere_death = CreatureEvent("sphere_death")
 function sphere_death.onDeath(creature)
 	local boss = Creature("Earl Osam")
 	if boss then
-		local currentSphereCount = boss:getStorageValue(3)
-		boss:setStorageValue(3, math.max(0, currentSphereCount - 1))
-		if boss:getStorageValue(3) <= 0 and boss:isMoveLocked() then
+		local currentSphereCount = getMonsterValue(boss, 3)
+		setMonsterValue(boss, 3, math.max(0, currentSphereCount - 1))
+		if getMonsterValue(boss, 3) <= 0 and boss:isMoveLocked() then
 			boss:setMoveLocked(false)
 		end
 	end
