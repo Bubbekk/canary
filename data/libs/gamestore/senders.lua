@@ -189,7 +189,7 @@ local function sendShowStoreOffers(playerId, category, redirectId)
 
 				msg:addU32(off.id)
 				msg:addU16(off.count or off.charges)
-				msg:addU32(xpBoostPrice or nameLockPrice or off.price)
+				msg:addU32(GameStore.applyVipDiscount(player, off, xpBoostPrice or nameLockPrice or off.price))
 				msg:addByte(off.coinType or 0x00)
 
 				msg:addByte((off.disabledReadonIndex ~= nil) and 1 or 0)
@@ -336,6 +336,7 @@ local function sendShowStoreOffersOnOldProtocol(playerId, category)
 			local playerKV = player:kv()
 			local purchaseExpCount = playerKV:get(GameStore.Kv.expBoostCount) or 0
 			local offerPrice = offer.type == GameStore.OfferTypes.OFFER_TYPE_EXPBOOST and GameStore.ExpBoostValues[purchaseExpCount] or (newPrice or offer.price or 0xFFFF)
+			offerPrice = GameStore.applyVipDiscount(player, offer, offerPrice)
 			msg:addU32(offer.id and offer.id or 0xFFFF)
 			msg:addString(name, "sendShowStoreOffersOnOldProtocol - name")
 			msg:addString(offer.description or GameStore.getDefaultDescription(offer.type, offer.count), "sendShowStoreOffersOnOldProtocol - offer.description or GameStore.getDefaultDescription(offer.type, offer.count)")
@@ -592,6 +593,7 @@ local function sendHomePage(playerId)
 		if offer.type == GameStore.OfferTypes.OFFER_TYPE_NAMECHANGE and player:kv():get("namelock") then
 			offerPrice = 0
 		end
+		offerPrice = GameStore.applyVipDiscount(player, offer, offerPrice)
 
 		msg:addString(offer.name, "sendHomePage - offer.name")
 		msg:addByte(0x1)

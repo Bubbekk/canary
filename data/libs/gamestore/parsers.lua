@@ -300,6 +300,7 @@ local function parseBuyStoreOffer(playerId, msg)
 	if offer.type == GameStore.OfferTypes.OFFER_TYPE_NAMECHANGE and player:kv():get("namelock") then
 		offerPrice = 0
 	end
+	offerPrice = GameStore.applyVipDiscount(player, offer, offerPrice)
 	-- Check if offer can be honored
 	if offerPrice > 0 and not player:canPayForOffer(offerPrice, offerCoinType) then
 		return queueSendStoreAlertToUser("You don't have enough coins. Your purchase has been cancelled.", 250, playerId)

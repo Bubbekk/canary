@@ -128,6 +128,15 @@ local function canBuyOffer(self, offer)
 				disabled = 1
 				disabledReason = "You already have an active XP boost."
 			end
+		elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_PREMIUM and offer.id == GameStore.FREE_PREMIUM_DAY_OFFER_ID then
+			local remaining = GameStore.getFreePremiumRemaining(self)
+			if remaining == nil then
+				disabled = 1
+				disabledReason = "The free premium day is temporarily unavailable."
+			elseif remaining > 0 then
+				disabled = 1
+				disabledReason = string.format("You already claimed your free premium day. You can claim it again in %d day(s).", math.ceil(remaining / 86400))
+			end
 		elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_HIRELING then
 			if self:getHirelingsCount() >= GameStore.ItemLimit.HIRELING then
 				disabled = 1
@@ -270,14 +279,23 @@ local function makeCoinTransaction(self, offer, desc)
 		playerKV:set(GameStore.Kv.expBoostCount, expBoostCount + 1)
 	end
 
-	if offer.coinType == GameStore.CoinType.Coin and self:canRemoveCoins(offer.price) then
-		op = self:removeCoinsBalance(offer.price)
-	elseif offer.coinType == GameStore.CoinType.Transferable and self:canPayForOffer(offer.price, offer.coinType) then
-		op = removeCombinedCoinsBalance(self, offer.price)
+	-- Precio final (con descuento VIP si corresponde); el mismo que se muestra en la tienda
+	local price = GameStore.applyVipDiscount(self, offer, offer.price)
+
+	-- Ofertas gratuitas: no hay monedas que descontar, solo se registra en el historial
+	if not isExpBoost and (price or 0) == 0 then
+		GameStore.insertHistory(self:getAccountId(), GameStore.HistoryTypes.HISTORY_TYPE_NONE, desc, 0, offer.coinType)
+		return true
+	end
+
+	if offer.coinType == GameStore.CoinType.Coin and self:canRemoveCoins(price) then
+		op = self:removeCoinsBalance(price)
+	elseif offer.coinType == GameStore.CoinType.Transferable and self:canPayForOffer(price, offer.coinType) then
+		op = removeCombinedCoinsBalance(self, price)
 	end
 
 	if op then
-		GameStore.insertHistory(self:getAccountId(), GameStore.HistoryTypes.HISTORY_TYPE_NONE, desc, offer.price * -1, offer.coinType)
+		GameStore.insertHistory(self:getAccountId(), GameStore.HistoryTypes.HISTORY_TYPE_NONE, desc, price * -1, offer.coinType)
 	end
 
 	return op

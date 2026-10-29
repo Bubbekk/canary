@@ -172,6 +172,16 @@ GameStore.DefaultDescriptions = {
 	TEMPLE = { "Need a quick way home? Buy this transportation service to get instantly teleported to your home temple. \\n\\nNote, you cannot use this service while having a battle sign or a protection zone block. Further, the service will not work in no-logout zones or close to your home temple." },
 }
 
+-- Premium "permanente": maximo de dias que admite la cuenta (player:addPremiumDays limita a 0xFFFE)
+GameStore.PERMANENT_PREMIUM_DAYS = 0xFFFE
+
+-- Oferta "Un dia de premium": gratis una vez cada 30 dias por cuenta (ver purchases.lua)
+GameStore.FREE_PREMIUM_DAY_OFFER_ID = 3001
+GameStore.FREE_PREMIUM_COOLDOWN = 30 * 24 * 60 * 60
+
+-- Descuento VIP (%) en la tienda para las ofertas de "Consumables" (ver store.applyVipDiscount)
+GameStore.VIP_STORE_DISCOUNT_PERCENT = 10
+
 GameStore.ItemLimit = {
 	PREY_WILDCARD = 50,
 	INSTANT_REWARD_ACCESS = 90,

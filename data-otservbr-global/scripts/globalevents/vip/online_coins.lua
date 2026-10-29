@@ -1,15 +1,18 @@
 local config = {
-	enabled = false,
+	enabled = true,
 	storage = Storage.VipSystem.OnlineCoinsGain,
-	checkDuplicateIps = false,
+	-- solo un personaje por IP acumula monedas (evita granjear con varios clientes)
+	checkDuplicateIps = true,
+	-- no acumulan los personajes inactivos (vipStayOnline los deja conectados sin jugar)
+	maxIdleMs = 5 * 60 * 1000,
 
 	interval = 60 * 1000,
 
 	-- per hour | system will calculate how many coins will be given and when
 	-- put 0 in coinsPerHour.free to disable free from receiving coins
 	coinsPerHour = {
-		free = 1,
-		vip = 5,
+		free = 0.5,
+		vip = 1,
 	},
 
 	-- system will distribute when the player accumulate x coins
@@ -31,7 +34,7 @@ function onlineCoinsEvent.onThink(interval)
 
 	local checkIp = {}
 	for _, player in pairs(players) do
-		if player:getGroup():getId() > GROUP_TYPE_SENIORTUTOR or (config.coinsPerHour.free < 1 and not player:isVip()) then
+		if player:getGroup():getId() > GROUP_TYPE_SENIORTUTOR or (config.coinsPerHour.free <= 0 and not player:isVip()) or player:getIdleTime() > config.maxIdleMs then
 			goto continue
 		end
 
@@ -44,7 +47,7 @@ function onlineCoinsEvent.onThink(interval)
 			if coins >= config.awardOn then
 				local coinsMath = math.floor(coins)
 				player:addTibiaCoins(coinsMath, true)
-				player:sendTextMessage(MESSAGE_FAILURE, string.format("Congratulations %s!\z You have received %d %s for being online.", player:getName(), coinsMath, "tibia coins"))
+				player:sendTextMessage(MESSAGE_FAILURE, string.format("Felicidades %s! Recibiste %d tibia coins por estar conectado.", player:getName(), coinsMath))
 				player:setStorageValue(config.storage, (coins - coinsMath) * 10000000)
 			end
 		end

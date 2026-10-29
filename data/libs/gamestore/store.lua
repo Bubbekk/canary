@@ -112,6 +112,18 @@ local function haveOfferRook(id)
 	return nil
 end
 
+-- Precio final para el jugador: aplica el descuento VIP a las ofertas marcadas con vipDiscount.
+-- Se usa al mostrar Y al cobrar, para que ambos coincidan siempre.
+local function applyVipDiscount(player, offer, price)
+	if type(price) ~= "number" or price <= 0 or not offer or not offer.vipDiscount or not player then
+		return price
+	end
+	if not (configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) and player:isVip()) then
+		return price
+	end
+	return math.max(1, math.floor(price * (100 - GameStore.VIP_STORE_DISCOUNT_PERCENT) / 100 + 0.5))
+end
+
 local function insertHistory(accountId, mode, description, coinAmount, coinType)
 	return db.query(string.format("INSERT INTO `store_history`(`account_id`, `mode`, `description`, `coin_type`, `coin_amount`, `time`) VALUES (%s, %s, %s, %s, %s, %s)", accountId, mode, db.escapeString(description), coinType, coinAmount, os.time()))
 end
@@ -371,6 +383,7 @@ store.getOffersByName = getOffersByName
 store.haveCategoryRook = haveCategoryRook
 store.haveOfferRook = haveOfferRook
 store.insertHistory = insertHistory
+store.applyVipDiscount = applyVipDiscount
 store.retrieveHistoryTotalPages = retrieveHistoryTotalPages
 store.retrieveHistoryEntries = retrieveHistoryEntries
 store.getDefaultDescription = getDefaultDescription
