@@ -1,4 +1,4 @@
-return {
+local category = {
 	icons = { "Category_Blessings.png" },
 	name = "Blessings",
 	parent = "Consumables",
@@ -123,3 +123,16 @@ return {
 		},
 	},
 }
+
+-- El texto original asume 8% de reducción por bendición, pero en mundos retro-PvP
+-- el servidor usa 6.31% (Player::getLostPercent). Se ajusta para que la descripción sea veraz.
+local factor = IsRetroPVP() and 6.31 or 8
+for _, offer in ipairs(category.offers) do
+	if type(offer.description) == "string" then
+		offer.description = offer.description:gsub("(%d) blessing = [%d%.]+%% less", function(count)
+			return string.format("%s blessing = %.2f%% less", count, tonumber(count) * factor)
+		end)
+	end
+end
+
+return category

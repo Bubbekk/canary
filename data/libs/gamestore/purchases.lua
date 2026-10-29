@@ -38,6 +38,14 @@ local function processChargesPurchase(player, offerId, name, charges, movable, s
 end
 
 local function processSingleBlessingPurchase(player, blessId, count)
+	-- Twist of Fate no tiene efecto en mundos retro-PvP (Blessings.Config.HasToF)
+	if blessId == 1 and not Blessings.Config.HasToF then
+		return error({ code = 1, message = "Twist of Fate is not available on this world." })
+	end
+	-- Validar el máximo también en el servidor (antes solo lo comprobaba la interfaz)
+	if player:getBlessingCount(blessId) + count > 5 then
+		return error({ code = 1, message = "You reached the maximum amount for this blessing." })
+	end
 	player:addBlessing(blessId, count)
 end
 

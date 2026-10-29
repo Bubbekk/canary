@@ -41,7 +41,10 @@ local function canBuyOffer(self, offer)
 				disabledReason = "You already have a " .. ItemType(item:getId()):getName() .. "."
 			end
 		elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_BLESSINGS then
-			if self:getBlessingCount(offer.blessid) >= 5 then
+			if offer.blessid == 1 and not Blessings.Config.HasToF then
+				disabled = 1
+				disabledReason = "Twist of Fate is not available on this world."
+			elseif self:getBlessingCount(offer.blessid) >= 5 then
 				disabled = 1
 				disabledReason = "You reached the maximum amount for this blessing."
 			end
