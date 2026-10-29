@@ -25,14 +25,41 @@ local transformations = {
 	{ fromItemId = 25914, toItemId = 23374 },
 }
 
+-- Las pociones de barriles y toneles se crean en el buzón de la Tienda y marcadas como objeto
+-- de la Tienda (no se pueden vender ni intercambiar), tal como indica su descripción en la Tienda.
+-- Antes se creaban en el inventario como pociones normales y podían revenderse.
+-- Devuelve cuántas pociones se crearon (puede ser menos si el buzón se llena).
+local function addStorePotions(inbox, potionId, amount)
+	local stackSize = math.max(1, ItemType(potionId):getStackSize())
+	local created = 0
+	while created < amount do
+		local chunk = math.min(stackSize, amount - created)
+		local potion = inbox:addItem(potionId, chunk)
+		if not potion then
+			break
+		end
+		potion:setAttribute(ITEM_ATTRIBUTE_STORE, systemTime())
+		created = created + chunk
+	end
+	return created
+end
+
+-- Textos en Latin-1 (\243 = ó, \237 = í) porque el cliente trabaja en cp1252
 local function processTransformation(player, item, charges, transformation)
 	local transformedCount = 0
 
 	if charges <= 0 then
-		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "The item has no charges remaining.")
+		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "Este objeto no tiene cargas.")
 		return false
 	end
 
+	local inbox = player:getStoreInbox()
+	if not inbox then
+		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "No se encontr\243 tu buz\243n de la Tienda.")
+		return false
+	end
+
+	local inboxFull = false
 	for _, requiredItemId in ipairs(requiredItems) do
 		local itemCount = player:getItemCount(requiredItemId)
 
@@ -40,10 +67,17 @@ local function processTransformation(player, item, charges, transformation)
 			local transformable = math.min(itemCount, charges - transformedCount)
 
 			if transformable > 0 then
-				player:removeItem(requiredItemId, transformable)
-				player:addItem(transformation.toItemId, transformable)
+				-- Primero se crean las pociones; solo se retiran los frascos que se convirtieron
+				local created = addStorePotions(inbox, transformation.toItemId, transformable)
+				if created > 0 then
+					player:removeItem(requiredItemId, created)
+					transformedCount = transformedCount + created
+				end
 
-				transformedCount = transformedCount + transformable
+				if created < transformable then
+					inboxFull = true
+					break
+				end
 
 				if transformedCount >= charges then
 					break
@@ -61,9 +95,13 @@ local function processTransformation(player, item, charges, transformation)
 			item:remove(1)
 		end
 
-		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "Charges remaining: " .. newCharges)
-	else
-		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "You need flasks to carry all that.")
+		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("Se enviaron %d pociones a tu buz\243n de la Tienda. Cargas restantes: %d", transformedCount, newCharges))
+	elseif not inboxFull then
+		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "Necesitas frascos vac\237os para llenarlos.")
+	end
+
+	if inboxFull then
+		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "Tu buz\243n de la Tienda est\225 lleno. Libera espacio para seguir llenando pociones.")
 	end
 
 	return true

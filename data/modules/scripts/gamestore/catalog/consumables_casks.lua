@@ -8,7 +8,7 @@ return {
 		{
 			icons = { "Great_Health_Cask.png" },
 			name = "Great Health Cask",
-			price = 22,
+			price = 185,
 			itemtype = 25881,
 			count = 1000,
 			description = "<i>Place it in your house and fill up potions to restore your hit points!</i>\n\n{house}\n{box}\n{storeinbox}\n{usablebyallicon} can be used to fill up potions by all characters that have access to the house\n{storeinboxicon} potions created from this cask will be sent to your Store inbox and can only be stored there and in depot box\n{backtoinbox}\n{info} usable 1000 times a piece\n{transferableprice}",
@@ -17,7 +17,7 @@ return {
 		{
 			icons = { "Great_Mana_Cask.png" },
 			name = "Great Mana Cask",
-			price = 14,
+			price = 119,
 			itemtype = 25891,
 			count = 1000,
 			description = "<i>Place it in your house and fill up potions to refill your mana!</i>\n\n{house}\n{box}\n{storeinbox}\n{usablebyallicon} can be used to fill up potions by all characters that have access to the house\n{storeinboxicon} potions created from this cask will be sent to your Store inbox and can only be stored there and in depot box\n{backtoinbox}\n{info} usable 1000 times a piece\n{transferableprice}",
@@ -26,7 +26,7 @@ return {
 		{
 			icons = { "Great_Spirit_Cask.png" },
 			name = "Great Spirit Cask",
-			price = 22,
+			price = 189,
 			itemtype = 25899,
 			count = 1000,
 			description = "<i>Place it in your house and fill up potions to restore your hit points and mana!</i>\n\n{house}\n{box}\n{storeinbox}\n{usablebyallicon} can be used to fill up potions by all characters that have access to the house\n{storeinboxicon} potions created from this cask will be sent to your Store inbox and can only be stored there and in depot box\n{backtoinbox}\n{info} usable 1000 times a piece\n{transferableprice}",
@@ -35,7 +35,7 @@ return {
 		{
 			icons = { "Health_Cask.png" },
 			name = "Health Cask",
-			price = 5,
+			price = 47,
 			itemtype = 25879,
 			count = 1000,
 			description = "<i>Place it in your house and fill up potions to restore your hit points!</i>\n\n{house}\n{box}\n{storeinbox}\n{usablebyallicon} can be used to fill up potions by all characters that have access to the house\n{storeinboxicon} potions created from this cask will be sent to your Store inbox and can only be stored there and in depot box\n{backtoinbox}\n{info} usable 1000 times a piece\n{transferableprice}",
@@ -44,7 +44,7 @@ return {
 		{
 			icons = { "Mana_Cask.png" },
 			name = "Mana Cask",
-			price = 5,
+			price = 47,
 			itemtype = 25889,
 			count = 1000,
 			description = "<i>Place it in your house and fill up potions to refill your mana!</i>\n\n{house}\n{box}\n{storeinbox}\n{usablebyallicon} can be used to fill up potions by all characters that have access to the house\n{storeinboxicon} potions created from this cask will be sent to your Store inbox and can only be stored there and in depot box\n{backtoinbox}\n{info} usable 1000 times a piece\n{transferableprice}",
@@ -53,7 +53,7 @@ return {
 		{
 			icons = { "Strong_Health_Cask.png" },
 			name = "Strong Health Cask",
-			price = 11,
+			price = 95,
 			itemtype = 25880,
 			count = 1000,
 			description = "<i>Place it in your house and fill up potions to restore your hit points!</i>\n\n{house}\n{box}\n{storeinbox}\n{usablebyallicon} can be used to fill up potions by all characters that have access to the house\n{storeinboxicon} potions created from this cask will be sent to your Store inbox and can only be stored there and in depot box\n{backtoinbox}\n{info} usable 1000 times a piece\n{transferableprice}",
@@ -62,7 +62,7 @@ return {
 		{
 			icons = { "Strong_Mana_Cask.png" },
 			name = "Strong Mana Cask",
-			price = 9,
+			price = 77,
 			itemtype = 25890,
 			count = 1000,
 			description = "<i>Place it in your house and fill up potions to refill your mana!</i>\n\n{house}\n{box}\n{storeinbox}\n{usablebyallicon} can be used to fill up potions by all characters that have access to the house\n{storeinboxicon} potions created from this cask will be sent to your Store inbox and can only be stored there and in depot box\n{backtoinbox}\n{info} usable 1000 times a piece\n{transferableprice}",
@@ -71,7 +71,7 @@ return {
 		{
 			icons = { "Supreme_Health_Cask.png" },
 			name = "Supreme Health Cask",
-			price = 59,
+			price = 518,
 			itemtype = 25883,
 			count = 1000,
 			description = "<i>Place it in your house and fill up potions to restore your hit points!</i>\n\n{house}\n{box}\n{storeinbox}\n{usablebyallicon} can be used to fill up potions by all characters that have access to the house\n{storeinboxicon} potions created from this cask will be sent to your Store inbox and can only be stored there and in depot box\n{backtoinbox}\n{info} usable 1000 times a piece\n{transferableprice}",
@@ -80,7 +80,7 @@ return {
 		{
 			icons = { "Ultimate_Health_Cask.png" },
 			name = "Ultimate Health Cask",
-			price = 36,
+			price = 315,
 			itemtype = 25882,
 			count = 1000,
 			description = "<i>Place it in your house and fill up potions to restore your hit points!</i>\n\n{house}\n{box}\n{storeinbox}\n{usablebyallicon} can be used to fill up potions by all characters that have access to the house\n{storeinboxicon} potions created from this cask will be sent to your Store inbox and can only be stored there and in depot box\n{backtoinbox}\n{info} usable 1000 times a piece\n{transferableprice}",
@@ -89,7 +89,7 @@ return {
 		{
 			icons = { "Ultimate_Mana_Cask.png" },
 			name = "Ultimate Mana Cask",
-			price = 42,
+			price = 364,
 			itemtype = 25892,
 			count = 1000,
 			description = "<i>Place it in your house and fill up potions to refill your mana!</i>\n\n{house}\n{box}\n{storeinbox}\n{usablebyallicon} can be used to fill up potions by all characters that have access to the house\n{storeinboxicon} potions created from this cask will be sent to your Store inbox and can only be stored there and in depot box\n{backtoinbox}\n{info} usable 1000 times a piece\n{transferableprice}",
@@ -98,7 +98,7 @@ return {
 		{
 			icons = { "Ultimate_Spirit_Cask.png" },
 			name = "Ultimate Spirit Cask",
-			price = 42,
+			price = 364,
 			itemtype = 25900,
 			count = 1000,
 			description = "<i>Place it in your house and fill up potions to restore your hit points and mana!</i>\n\n{house}\n{box}\n{storeinbox}\n{usablebyallicon} can be used to fill up potions by all characters that have access to the house\n{storeinboxicon} potions created from this cask will be sent to your Store inbox and can only be stored there and in depot box\n{backtoinbox}\n{info} usable 1000 times a piece\n{transferableprice}",
