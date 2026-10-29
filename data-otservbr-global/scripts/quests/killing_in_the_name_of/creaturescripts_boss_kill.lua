@@ -39,7 +39,9 @@ local deathEvent = CreatureEvent("KillingInTheNameOfBossDeath")
 function deathEvent.onDeath(creature, _corpse, _lastHitKiller, mostDamageKiller)
 	local targetName = creature:getName():lower()
 
-	onDeathForParty(creature, mostDamageKiller, function(creature, player)
+	-- Credit every player who damaged the boss. Using only the most-damage killer missed the kill when a
+	-- summon (or someone outside the party) dealt most damage, and Grizzly then reset the boss task (#2730).
+	onDeathForDamagingPlayers(creature, function(creature, player)
 		for i, bossName in pairs(taskBoss) do
 			if targetName == bossName then
 				if player:getStorageValue(bossKillCount + i) == 0 then

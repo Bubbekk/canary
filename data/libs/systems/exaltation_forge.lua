@@ -1,3 +1,11 @@
+-- Las cuentas VIP reciben 1 de polvo extra por cada monstruo influenciado o fiendish (respeta el límite de polvo)
+function vipForgeExtraDust(player)
+	if player and configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) and player:isVip() then
+		return 1
+	end
+	return 0
+end
+
 if not ForgeMonster then
 	ForgeMonster = {
 		timeLeftToChangeMonsters = {},
@@ -77,7 +85,7 @@ function ForgeMonster:onDeath(creature, corpse, killer, mostDamageKiller, unjust
 					-- Each stack can multiplied from 1x to 3x
 					-- Example monster with 5 stack and system randomize multiplier 3x, players will receive 15x dusts
 
-					local amount = math.random(stack, forgeAmountMultiplier * stack)
+					local amount = math.random(stack, forgeAmountMultiplier * stack) + vipForgeExtraDust(playerKiller)
 
 					local totalDusts = playerKiller:getForgeDusts()
 					local limitDusts = playerKiller:getForgeDustLevel()
@@ -90,9 +98,9 @@ function ForgeMonster:onDeath(creature, corpse, killer, mostDamageKiller, unjust
 						end
 
 						local actualTotalDusts = playerKiller:getForgeDusts()
-						playerKiller:sendTextMessage(MESSAGE_EVENT_ADVANCE, "You received " .. amount .. " dust" .. " for the Exaltation Forge. You now have " .. actualTotalDusts .. " out of a maximum of " .. limitDusts .. " dusts.")
+						playerKiller:sendTextMessage(MESSAGE_EVENT_ADVANCE, "Recibiste " .. amount .. " de polvo para la Forja de Exaltaci\243n. Ahora tienes " .. actualTotalDusts .. " de un m\225ximo de " .. limitDusts .. ".")
 					else
-						playerKiller:sendTextMessage(MESSAGE_EVENT_ADVANCE, "You did not receive " .. amount .. " dust" .. " for the Exaltation Forge because you have already reached the maximum of " .. limitDusts .. " dust.")
+						playerKiller:sendTextMessage(MESSAGE_EVENT_ADVANCE, "No recibiste " .. amount .. " de polvo para la Forja de Exaltaci\243n porque ya alcanzaste el m\225ximo de " .. limitDusts .. ".")
 					end
 				end
 			end
@@ -111,7 +119,7 @@ function ForgeMonster:onDeath(creature, corpse, killer, mostDamageKiller, unjust
 				-- Each stack can multiplied from 1x to 3x
 				-- Example monster with 5 stack and system randomize multiplier 3x, players will receive 15x dusts
 
-				local amount = math.random(stack, forgeAmountMultiplier * stack)
+				local amount = math.random(stack, forgeAmountMultiplier * stack) + vipForgeExtraDust(playerKiller)
 
 				local totalDusts = playerKiller:getForgeDusts()
 				local limitDusts = playerKiller:getForgeDustLevel()
@@ -124,9 +132,9 @@ function ForgeMonster:onDeath(creature, corpse, killer, mostDamageKiller, unjust
 					end
 
 					local actualTotalDusts = playerKiller:getForgeDusts()
-					playerKiller:sendTextMessage(MESSAGE_EVENT_ADVANCE, "You received " .. amount .. " dust" .. " for the Exaltation Forge. You now have " .. actualTotalDusts .. " out of a maximum of " .. limitDusts .. " dusts.")
+					playerKiller:sendTextMessage(MESSAGE_EVENT_ADVANCE, "Recibiste " .. amount .. " de polvo para la Forja de Exaltaci\243n. Ahora tienes " .. actualTotalDusts .. " de un m\225ximo de " .. limitDusts .. ".")
 				else
-					playerKiller:sendTextMessage(MESSAGE_EVENT_ADVANCE, "You did not receive " .. amount .. " dust" .. " for the Exaltation Forge because you have already reached the maximum of " .. limitDusts .. " dust.")
+					playerKiller:sendTextMessage(MESSAGE_EVENT_ADVANCE, "No recibiste " .. amount .. " de polvo para la Forja de Exaltaci\243n porque ya alcanzaste el m\225ximo de " .. limitDusts .. ".")
 				end
 			end
 		end

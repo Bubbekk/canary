@@ -113,8 +113,6 @@ end
 
 bossesDeath:register()
 
-fourthTaintBossesDeath:register()
-
 local lastUse = 0
 local cooldown = 30
 

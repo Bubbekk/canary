@@ -78,11 +78,6 @@ local lionsRock = {
 local gems = Action()
 
 function gems.onUse(player, item, fromPosition, target, toPosition, isHotkey)
-	local questStorage = player:getStorageValue(Storage.Quest.U10_70.LionsRock.Questline)
-	if questStorage == 10 or questStorage == 11 then
-		player:setStorageValue(Storage.Quest.U10_70.LionsRock.Questline, 6)
-	end
-
 	-- Small emerald for Kilmaresh quest
 	-- see data\scripts\quests\kilmaresh\1-fafnars-wrath\7-four-masks.lua
 	if item.itemid == 3032 and target.uid == 40032 and player:getStorageValue(Storage.Quest.U12_20.KilmareshQuest.Sixth.Favor) >= 1 and not testFlag(player:getStorageValue(Storage.Quest.U12_20.KilmareshQuest.Sixth.FourMasks), 4) then
@@ -130,57 +125,63 @@ function gems.onUse(player, item, fromPosition, target, toPosition, isHotkey)
 		return false
 	end
 
-	-- Reset lion's fields
-	local function lionsRockFieldReset()
-		local gemSpot = Tile(setting.itemPos):getItemById(setting.fieldId)
-		if gemSpot then
-			player:setStorageValue(Storage.Quest.U10_70.LionsRock.LionsRockFields, player:getStorageValue(Storage.Quest.U10_70.LionsRock.LionsRockFields) - 1)
-			gemSpot:remove()
-			return true
-		end
+	-- The four signs of the inner sanctum raise the questline to 9; every socket needs its own gem.
+	-- The fountain appears when the four flames burn at the same time. The flames are checked on the
+	-- map (not in player storage), so the order does not matter and an expired flame can be relit.
+	-- The old code expected the questline to be exactly 6, 7, 8 and 9 in turn, which reading the
+	-- signs made impossible, so the fountain never appeared.
+	if player:getStorageValue(setting.storage) < 9 or setting.item ~= item.itemid then
+		return false
 	end
 
-	-- Check if all lion's fields are set
-	local function checkLionsRockFields(storage)
-		if player:getStorageValue(Storage.Quest.U10_70.LionsRock.LionsRockFields) == 3 then
-			local stone = Tile(lionsRockSanctuaryPos):getItemById(lionsRockSanctuaryRockId)
-			if stone then
-				stone:transform(lionsRockSanctuaryFountainId)
-				lionsRockSanctuaryPos:sendMagicEffect(CONST_ME_THUNDER)
-				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "Something happens at the center of the room ...")
-				player:setStorageValue(storage, 10)
-				return true
+	if Tile(setting.itemPos):getItemById(setting.fieldId) then
+		return false
+	end
+
+	local playerId = player:getId()
+	local function allFlamesBurning()
+		for _, socket in pairs(lionsRock) do
+			if not Tile(socket.itemPos):getItemById(socket.fieldId) then
+				return false
 			end
 		end
+		return true
 	end
 
-	-- Delay to create lion's field
-	local function lionsRockCreateField(itemPos, fieldId, storage)
-		local gemSpot = Tile(itemPos):getItemById(fieldId)
-		if not gemSpot then
+	local function createFlame(itemPos, fieldId)
+		if not Tile(itemPos):getItemById(fieldId) then
 			Game.createItem(fieldId, 1, itemPos)
-			player:setStorageValue(Storage.Quest.U10_70.LionsRock.LionsRockFields, player:getStorageValue(Storage.Quest.U10_70.LionsRock.LionsRockFields) + 1)
-			checkLionsRockFields(storage)
-			return true
 		end
-	end
-
-	if player:getStorageValue(setting.storage) == setting.value then
-		if setting.item == item.itemid then
-			local gemSpot = Tile(setting.itemPos):getItemById(setting.fieldId)
-			if not gemSpot then
-				toPosition:sendMagicEffect(setting.effect)
-				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, setting.message)
-				item:remove(1)
-				player:setStorageValue(setting.storage, setting.value + 1)
-				addEvent(lionsRockCreateField, 2 * 1000, setting.itemPos, setting.fieldId, setting.storage)
-				addEvent(lionsRockFieldReset, 60 * 1000)
-				return true
+		if not allFlamesBurning() then
+			return
+		end
+		local stone = Tile(lionsRockSanctuaryPos):getItemById(lionsRockSanctuaryRockId)
+		if stone then
+			stone:transform(lionsRockSanctuaryFountainId)
+			lionsRockSanctuaryPos:sendMagicEffect(CONST_ME_THUNDER)
+		end
+		local owner = Player(playerId)
+		if owner then
+			owner:sendTextMessage(MESSAGE_EVENT_ADVANCE, "Something happens at the center of the room ...")
+			if owner:getStorageValue(Storage.Quest.U10_70.LionsRock.Questline) < 10 then
+				owner:setStorageValue(Storage.Quest.U10_70.LionsRock.Questline, 10)
 			end
 		end
 	end
 
-	return false
+	local function removeFlame(itemPos, fieldId)
+		local flame = Tile(itemPos):getItemById(fieldId)
+		if flame then
+			flame:remove()
+		end
+	end
+
+	toPosition:sendMagicEffect(setting.effect)
+	player:sendTextMessage(MESSAGE_EVENT_ADVANCE, setting.message)
+	item:remove(1)
+	addEvent(createFlame, 2 * 1000, setting.itemPos, setting.fieldId)
+	addEvent(removeFlame, 60 * 1000, setting.itemPos, setting.fieldId)
+	return true
 end
 
 for index, value in pairs(shrine) do

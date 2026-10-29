@@ -43,6 +43,12 @@ if configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) then
 	premiumDescription = premiumDescription .. "&#8226; " .. GameStore.VIP_STORE_DISCOUNT_PERCENT .. "% discount on consumables in the Store\n"
 	premiumDescription = premiumDescription .. "&#8226; more Tibia Coins for being online\n"
 	premiumDescription = premiumDescription .. "&#8226; no daily limit on XP Boost purchases\n"
+	premiumDescription = premiumDescription .. "&#8226; third Prey slot and Weekly Task Expansion unlocked\n"
+	premiumDescription = premiumDescription .. "&#8226; bestiary kills count 5x instead of 3x\n"
+	premiumDescription = premiumDescription .. "&#8226; exclusive VIP daily rewards in the reward wall\n"
+	premiumDescription = premiumDescription .. "&#8226; access to the Wheel of Destiny\n"
+	premiumDescription = premiumDescription .. "&#8226; +1 forge dust from influenced and fiendish creatures\n"
+	premiumDescription = premiumDescription .. "&#8226; exercise weapon training 10x faster\n"
 	premiumDescription = premiumDescription .. "\n{usablebyallicon} valid for all characters on this account\n{activated}"
 end
 

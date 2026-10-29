@@ -2,6 +2,9 @@ local dailyRewardShrine = Action()
 
 function dailyRewardShrine.onUse(player, item, fromPosition, itemEx, toPosition)
 	DailyReward.loadDailyReward(player, 0)
+	if VipDailyReward then
+		VipDailyReward.onShrineUse(player)
+	end
 	return true
 end
 

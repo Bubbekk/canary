@@ -114,7 +114,8 @@ function deathEvent.onDeath(creature)
 	local chanceTo = math.random(1, 10000)
 	if chanceTo <= (points * configManager.getNumber(configKeys.HAZARD_PODS_DROP_MULTIPLIER)) then
 		local closestFreePosition = player:getClosestFreePosition(monster:getPosition(), 4, true)
-		createPrimalPod(closestFreePosition)
+		-- Same guard as the Plunder Patriarch below: with no free tile the position is 0,0,0 and the pod was lost
+		createPrimalPod(closestFreePosition.x == 0 and monster:getPosition() or closestFreePosition)
 		return true
 	end
 

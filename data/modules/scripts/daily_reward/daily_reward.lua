@@ -340,12 +340,12 @@ DailyReward.init = function(playerId)
 		player:setStorageValue(DailyReward.storages.notifyReset, lastServerSave)
 		if player:getJokerTokens() >= missedDays then
 			player:setJokerTokens(player:getJokerTokens() - missedDays)
-			player:sendTextMessage(MESSAGE_LOGIN, "You lost " .. missedDays .. " joker tokens to prevent losing your streak.")
+			player:sendTextMessage(MESSAGE_LOGIN, "Perdiste " .. missedDays .. " comod\237n(es) de recompensa para no perder tu racha.")
 		else
 			player:setStreakLevel(0)
 			if player:getLastLoginSaved() > 0 then -- message wont appear at first character login
 				player:setJokerTokens(0)
-				player:sendTextMessage(MESSAGE_LOGIN, "You just lost your daily reward streak.")
+				player:sendTextMessage(MESSAGE_LOGIN, "Acabas de perder tu racha de recompensas diarias.")
 			end
 		end
 		DailyReward.settleMissedDays(player, lastServerSave)
@@ -388,7 +388,7 @@ function Player.sendOpenRewardWall(self, shrine)
 	msg:addByte(self:getDayStreak()) -- current reward? day = 0, day 1, ... this should be resetted to 0 every week imo
 	if DailyReward.isRewardTaken(self:getId()) then -- state (player already took reward? but just make sure noone wpe)
 		msg:addByte(1)
-		msg:addString("Sorry, you have already taken your daily reward or you are unable to collect it.", "Player.sendOpenRewardWall - Sorry, you have already taken your daily reward or you are unable to collect it.") -- Unknown message
+		msg:addString("Lo sentimos, ya recogiste tu recompensa diaria o no puedes recogerla.", "Player.sendOpenRewardWall - Sorry, you have already taken your daily reward or you are unable to collect it.") -- Unknown message
 		if self:getJokerTokens() > 0 then
 			msg:addByte(1)
 			msg:addU16(self:getJokerTokens())
@@ -422,20 +422,20 @@ function Player.selectDailyReward(self, msg)
 	local playerId = self:getId()
 
 	if DailyReward.isRewardTaken(playerId) and not DailyReward.testMode then
-		self:sendError("You have already collected your daily reward.")
+		self:sendError("Ya recogiste tu recompensa diaria.")
 		return false
 	end
 
 	local target = msg:getByte() -- 0 -> shrine / 1 -> tibia panel
 	local usesToken = not DailyReward.isShrine(target)
 	if usesToken and self:getCollectionTokens() < 1 then
-		self:sendError("You do not have enough collection tokens to proceed.")
+		self:sendError("No tienes suficientes Accesos instant\225neos a recompensas.")
 		return false
 	end
 
 	local dailyTable = DailyReward.rewards[self:getDayStreak() + 1]
 	if not dailyTable then
-		self:sendError("Something went wrong and we cannot process this request.")
+		self:sendError("Algo sali\243 mal y no se pudo procesar la solicitud.")
 		return false
 	end
 
@@ -444,7 +444,7 @@ function Player.selectDailyReward(self, msg)
 		rewardCount = dailyTable.premiumAccount
 	end
 	-- Bonus VIP: las cuentas VIP reciben un 50% extra en la recompensa diaria
-	if configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) and self:isVip() and type(rewardCount) == "number" then
+	if configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) and self:isVip() and tonumber(rewardCount) ~= nil then
 		rewardCount = math.min(255, math.floor(rewardCount * VIP_DAILY_REWARD_MULTIPLIER))
 	end
 
@@ -474,7 +474,7 @@ function Player.selectDailyReward(self, msg)
 			if count > 0 then
 				if not allowedItems[itemId] then
 					logger.warn("Player {} tried to pick invalid daily reward item {}", self:getName(), itemId)
-					self:sendError("Invalid reward selection.")
+					self:sendError("Selecci\243n de recompensa no v\225lida.")
 					return false
 				end
 				local entry = pickedIndex[itemId]
@@ -489,18 +489,18 @@ function Player.selectDailyReward(self, msg)
 		end
 
 		if totalCounter == 0 then
-			self:sendError("You must select at least one reward item.")
+			self:sendError("Debes seleccionar al menos un objeto de recompensa.")
 			return false
 		end
 		if totalCounter > rewardCount then
 			logger.warn("Player {} tried to pick {} daily reward items, limit is {}", self:getName(), totalCounter, rewardCount)
-			self:sendError(string.format("You can select at most %d reward items.", rewardCount))
+			self:sendError(string.format("Puedes seleccionar como m\225ximo %d objetos de recompensa.", rewardCount))
 			return false
 		end
 
 		local inbox = self:getStoreInbox()
 		if not inbox then
-			self:sendError("You do not have enough space in your store inbox.")
+			self:sendError("No tienes espacio suficiente en tu buz\243n de la Tienda.")
 			return false
 		end
 
@@ -585,7 +585,7 @@ function Player.selectDailyReward(self, msg)
 			end
 			batchUpdate:delete()
 			logger.warn("Could not deliver daily reward item {} to player {}", failedItemId, self:getName())
-			self:sendError("Something went wrong and we could not deliver your daily reward.")
+			self:sendError("Algo sali\243 mal y no se pudo entregar tu recompensa diaria.")
 			return false
 		end
 
@@ -596,7 +596,7 @@ function Player.selectDailyReward(self, msg)
 		end
 
 		batchUpdate:delete()
-		dailyRewardMessage = "Picked items: " .. table.concat(descriptionParts, ", ") .. "."
+		dailyRewardMessage = "Objetos elegidos: " .. table.concat(descriptionParts, ", ") .. "."
 	elseif dailyTable.type == DAILY_REWARD_TYPE_XP_BOOST then
 		local rewardCountReviewed = rewardCount
 		local xpBoostLeftMinutes = self:kv():get("daily-reward-xp-boost") or 0
@@ -607,10 +607,10 @@ function Player.selectDailyReward(self, msg)
 		self:setXpBoostTime(self:getXpBoostTime() + (rewardCountReviewed * 60))
 		self:kv():set("daily-reward-xp-boost", rewardCount)
 		self:setXpBoostPercent(50)
-		dailyRewardMessage = "Picked reward: XP Bonus for " .. rewardCount .. " minutes."
+		dailyRewardMessage = "Recompensa elegida: Potenciador de XP durante " .. rewardCount .. " minutos."
 	elseif dailyTable.type == DAILY_REWARD_TYPE_PREY_REROLL then
 		self:addPreyCards(rewardCount)
-		dailyRewardMessage = "Picked reward: " .. rewardCount .. "x Prey bonus reroll(s)."
+		dailyRewardMessage = "Recompensa elegida: " .. rewardCount .. "x comod\237n(es) de presa."
 	end
 
 	if dailyRewardMessage and usesToken then
@@ -619,7 +619,7 @@ function Player.selectDailyReward(self, msg)
 
 	if dailyRewardMessage then
 		-- Registering history
-		DailyReward.insertHistory(self:getGuid(), self:getDayStreak(), "Claimed reward no. \z
+		DailyReward.insertHistory(self:getGuid(), self:getDayStreak(), "Recompensa n\186 \z
 			" .. self:getDayStreak() + 1 .. ". " .. dailyRewardMessage)
 		DailyReward.processReward(playerId, target)
 	end
@@ -656,7 +656,7 @@ function Player.sendRewardHistory(self)
 
 	local entries = DailyReward.retrieveHistoryEntries(self:getId())
 	if #entries == 0 then
-		self:sendError("You don't have any entries yet.")
+		self:sendError("Todav\237a no tienes ning\250n registro.")
 		return false
 	end
 
@@ -678,7 +678,7 @@ function Player.readDailyReward(self, msg, currentDay, state)
 	if state == DAILY_REWARD_STATUS_PREMIUM then
 		itemsToPick = dailyTable.premiumAccount
 		-- Mostrar el bonus VIP en el muro de recompensas (debe coincidir con selectDailyReward)
-		if configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) and self:isVip() and type(itemsToPick) == "number" then
+		if configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) and self:isVip() and tonumber(itemsToPick) ~= nil then
 			itemsToPick = math.min(255, math.floor(itemsToPick * VIP_DAILY_REWARD_MULTIPLIER))
 		end
 	end

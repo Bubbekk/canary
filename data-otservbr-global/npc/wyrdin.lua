@@ -78,6 +78,12 @@ local function creatureSayCallback(npc, creature, type, message)
 		return false
 	end
 
+	-- Ongulf used to assign a keyword between 1 and 4, but only 3 words exist; reassign so the mission can be completed
+	local wyrdinKeyword = player:getStorageValue(TheNewFrontier.Mission05.WyrdinKeyword)
+	if wyrdinKeyword > 3 then
+		player:setStorageValue(TheNewFrontier.Mission05.WyrdinKeyword, math.random(1, 3))
+	end
+
 	if MsgContains(message, "mission") then
 		if player:getStorageValue(Storage.Quest.U8_4.InServiceOfYalahar.TheWayToYalahar) < 1 and player:getStorageValue(Storage.Quest.U7_6.ExplorerSociety.QuestLine) >= 5 and player:getStorageValue(Storage.Quest.U7_6.ExplorerSociety.JoiningTheExplorers) >= 5 then
 			npcHandler:say({
@@ -126,17 +132,16 @@ local function creatureSayCallback(npc, creature, type, message)
 			end
 		end
 	elseif MsgContains(message, "plea") and player:getStorageValue(TheNewFrontier.Mission05.WyrdinKeyword) == 1 and player:getStorageValue(TheNewFrontier.Mission05.Wyrdin) == 1 then
-		if npcHandler:getTopic(playerId) == 2 then
-			local chance = math.random(1, 3)
-			if chance == 1 then
-				npcHandler:say("Hm, you are right, we are at the forefront of knowledge and innovation. Our dwarven friends could learn much from one of our representatives.", npc, creature)
-			elseif chance == 2 then
-				npcHandler:say("<sighs> Okay, sending some trader there won't hurt. I hope it will be worth the effort, though.", npc, creature)
-			else
-				npcHandler:say({ "Well, it can't be wrong to be there when new discoveries are made. Also, all those soldiers of fortune that might travel there could turn out to be a good source of income for a magic shop. ...", "I think we'll send a representative. At least, for some time." }, npc, creature)
-			end
-			player:setStorageValue(TheNewFrontier.Mission05.Wyrdin, 3)
+		-- No topic check: "bluff" and "flatter" accept the word at any point, "plea" must behave the same
+		local chance = math.random(1, 3)
+		if chance == 1 then
+			npcHandler:say("Hm, you are right, we are at the forefront of knowledge and innovation. Our dwarven friends could learn much from one of our representatives.", npc, creature)
+		elseif chance == 2 then
+			npcHandler:say("<sighs> Okay, sending some trader there won't hurt. I hope it will be worth the effort, though.", npc, creature)
+		else
+			npcHandler:say({ "Well, it can't be wrong to be there when new discoveries are made. Also, all those soldiers of fortune that might travel there could turn out to be a good source of income for a magic shop. ...", "I think we'll send a representative. At least, for some time." }, npc, creature)
 		end
+		player:setStorageValue(TheNewFrontier.Mission05.Wyrdin, 3)
 	elseif MsgContains(message, "bluff") and player:getStorageValue(TheNewFrontier.Mission05.WyrdinKeyword) == 2 and player:getStorageValue(TheNewFrontier.Mission05.Wyrdin) == 1 then
 		npcHandler:say("What do you mean the druids of Carlin could provide the service as well? They are incompetent imposters! I will not allow them to ruin our reputation! I'll send some trader with supplies right away!", npc, creature)
 		player:setStorageValue(TheNewFrontier.Mission05.Wyrdin, 3)
