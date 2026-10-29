@@ -27,12 +27,13 @@ local REWARDS = {
 	[4] = { type = "xpboost", minutes = 30 },
 	[5] = { type = "tokens", amount = 1 },
 	[6] = { type = "exercise" },
-	[7] = { type = "chest", minutes = 60, coins = 5, tokens = 1 },
+	[7] = { type = "chest", minutes = 60, slivers = 10, coins = 5, tokens = 1 },
 }
 
 -- Armas de entrenamiento normales (500 cargas)
 local EXERCISE_WEAPONS = { 28552, 28553, 28554, 28555, 28556, 28557 } -- sword, axe, club, bow, rod, wand
 local EXERCISE_CHARGES = 500
+local SLIVER_ITEM_ID = 37109
 
 local shrineVisits = {} -- [playerId] = { time = os.time(), pos = Position }
 local tableReady = false
@@ -150,11 +151,15 @@ local function deliver(player, reward, choice)
 		player:setXpBoostTime(reward.minutes * 60)
 		return string.format("Potenciador de XP del 50%% durante %d minutos", reward.minutes)
 	elseif reward.type == "chest" then
+		-- Primero los objetos (puede fallar si el buzón está lleno); después lo que no puede fallar
+		if not deliverItems(player, { { SLIVER_ITEM_ID, reward.slivers } }) then
+			return nil
+		end
 		player:setXpBoostPercent(50)
 		player:setXpBoostTime(reward.minutes * 60)
 		player:addTibiaCoins(reward.coins)
 		player:setCollectionTokens(player:getCollectionTokens() + reward.tokens)
-		return string.format("Cofre VIP: Potenciador de XP de %d minutos, %d Tibia Coins y %dx Acceso instant\225neo a recompensas", reward.minutes, reward.coins, reward.tokens)
+		return string.format("Cofre VIP: Potenciador de XP de %d minutos, %d slivers, %d Tibia Coins y %dx Acceso instant\225neo a recompensas", reward.minutes, reward.slivers, reward.coins, reward.tokens)
 	end
 	return nil
 end
