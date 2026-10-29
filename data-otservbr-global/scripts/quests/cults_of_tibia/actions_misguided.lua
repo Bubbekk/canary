@@ -46,7 +46,9 @@ function cultsOfTibiaMisguided.onUse(player, item, position, target, targetPosit
 		return false
 	end
 
-	local map = (type(Game.getStorageValue("cultsMap")) == "string" and Game.getStorageValue("cultsMap") or "illusion")
+	-- Same key that changeMap writes: reading "cultsMap" (never set) reloaded the whole area map on every use,
+	-- even while it was already showing reality, which disrupted the map and crashed clients (#3605)
+	local map = (type(Game.getStorageValue("cultsMisguidedMap")) == "string" and Game.getStorageValue("cultsMisguidedMap") or "illusion")
 	if creature:getName():lower() == "misguided bully" or creature:getName():lower() == "misguided thief" then
 		player:setStorageValue(Storage.Quest.U11_40.CultsOfTibia.Misguided.Monsters, 0)
 		item:remove(1)
@@ -64,7 +66,9 @@ function cultsOfTibiaMisguided.onUse(player, item, position, target, targetPosit
 		if map == "illusion" then
 			changeMap("reality")
 		end
-		it:decay()
+		if it then
+			it:decay()
+		end
 	end
 
 	return true

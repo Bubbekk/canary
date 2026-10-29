@@ -493,10 +493,21 @@ std::string convertIPToString(uint32_t ip) {
 	return std::string(buffer.data());
 }
 
+// Formats with a local std::tm: a system_clock time_point printed the seconds with fractional digits
+// and in UTC instead of the server's local time (#4154)
+static std::tm toLocalTime(time_t time) {
+	std::tm localTm {};
+#if defined(_WIN32) || defined(_WIN64)
+	localtime_s(&localTm, &time);
+#else
+	localtime_r(&time, &localTm);
+#endif
+	return localTm;
+}
+
 std::string formatDate(time_t time) {
 	try {
-		auto tp = std::chrono::system_clock::from_time_t(time);
-		return fmt::format("{:%d/%m/%Y %H:%M:%S}", tp);
+		return fmt::format("{:%d/%m/%Y %H:%M:%S}", toLocalTime(time));
 	} catch (const std::out_of_range &exception) {
 		g_logger().error("Failed to format date with error code {}", exception.what());
 	}
@@ -505,8 +516,7 @@ std::string formatDate(time_t time) {
 
 std::string formatDateShort(time_t time) {
 	try {
-		auto tp = std::chrono::system_clock::from_time_t(time);
-		return fmt::format("{:%Y-%m-%d %X}", tp);
+		return fmt::format("{:%Y-%m-%d %X}", toLocalTime(time));
 	} catch (const std::out_of_range &exception) {
 		g_logger().error("Failed to format date short with error code {}", exception.what());
 	}
@@ -515,8 +525,7 @@ std::string formatDateShort(time_t time) {
 
 std::string formatDateTime(int64_t ms) {
 	try {
-		auto tp = std::chrono::system_clock::from_time_t(ms / 1000);
-		return fmt::format("{:%Y-%m-%d %H:%M:%S}", tp);
+		return fmt::format("{:%Y-%m-%d %H:%M:%S}", toLocalTime(static_cast<time_t>(ms / 1000)));
 	} catch (const std::out_of_range &exception) {
 		g_logger().error("Failed to format datetime with error code {}", exception.what());
 	}

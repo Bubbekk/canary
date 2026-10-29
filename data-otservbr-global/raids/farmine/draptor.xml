@@ -11,13 +11,29 @@
 	<singlespawn delay="120000" name="Draptor" x="33256" y="31158" z="7"/>
 	<singlespawn delay="120000" name="Draptor" x="33234" y="31185" z="7"/>
 	<singlespawn delay="20000" name="Grand Mother Foulscale" x="33311" y="31177" z="7"/>
+	<!-- Dragons arrive in waves of 20 every 2 s: 150 at once lagged the server (#3599) -->
 	<areaspawn delay="20000" fromx="33213" fromy="31160" fromz="7" tox="33352" toy="31237" toz="7">
-		<monster name="Dragon" amount="70"/>
+		<monster name="Dragon" amount="20"/>
 	</areaspawn>
-	<areaspawn delay="10000" fromx="33195" fromy="31185" fromz="7" tox="33286" toy="31247" toz="7">
-		<monster name="Dragon" amount="40"/>
+	<areaspawn delay="22000" fromx="33213" fromy="31160" fromz="7" tox="33352" toy="31237" toz="7">
+		<monster name="Dragon" amount="20"/>
 	</areaspawn>
-	<areaspawn delay="10000" fromx="33284" fromy="31169" fromz="7" tox="33350" toy="31196" toz="7">
-		<monster name="Dragon" amount="40"/>
+	<areaspawn delay="24000" fromx="33213" fromy="31160" fromz="7" tox="33352" toy="31237" toz="7">
+		<monster name="Dragon" amount="20"/>
+	</areaspawn>
+	<areaspawn delay="26000" fromx="33213" fromy="31160" fromz="7" tox="33352" toy="31237" toz="7">
+		<monster name="Dragon" amount="10"/>
+	</areaspawn>
+	<areaspawn delay="28000" fromx="33195" fromy="31185" fromz="7" tox="33286" toy="31247" toz="7">
+		<monster name="Dragon" amount="20"/>
+	</areaspawn>
+	<areaspawn delay="30000" fromx="33195" fromy="31185" fromz="7" tox="33286" toy="31247" toz="7">
+		<monster name="Dragon" amount="20"/>
+	</areaspawn>
+	<areaspawn delay="32000" fromx="33284" fromy="31169" fromz="7" tox="33350" toy="31196" toz="7">
+		<monster name="Dragon" amount="20"/>
+	</areaspawn>
+	<areaspawn delay="34000" fromx="33284" fromy="31169" fromz="7" tox="33350" toy="31196" toz="7">
+		<monster name="Dragon" amount="20"/>
 	</areaspawn>
 </raid>

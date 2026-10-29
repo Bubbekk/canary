@@ -97,7 +97,9 @@ function deathEvent.onDeath(creature)
 	end
 
 	local monster = creature:getMonster()
-	if not creature or not monster or not monster:hazard() or not hazard:isInZone(monster:getPosition()) then
+	-- Dying inside the hazard zone is what matters; the hazard flag could be missing on monsters that
+	-- spawned before the zone event existed, which stopped pods and the patriarch from ever spawning (#3549)
+	if not creature or not monster or not hazard:isInZone(monster:getPosition()) then
 		return true
 	end
 	-- don't spawn pods or plunder if the monster is a reward boss
@@ -133,3 +135,26 @@ function deathEvent.onDeath(creature)
 end
 
 deathEvent:register()
+
+-- Monsters placed while the server starts may enter the zone before its spawn event is active, so they
+-- would miss the hazard flag (and its crit, dodge and damage boosts). Apply it once the world is loaded.
+local hazardStartup = GlobalEvent("PrimalHazardStartup")
+function hazardStartup.onStartup()
+	if not configManager.getBoolean(configKeys.TOGGLE_HAZARDSYSTEM) then
+		return true
+	end
+
+	local tagged = 0
+	for _, monster in ipairs(hazardZone:getMonsters()) do
+		if not monster:hazard() and not monster:getMaster() then
+			monster:registerEvent("PrimalHazardDeath")
+			if HazardMonster and HazardMonster.onSpawn then
+				HazardMonster.onSpawn(monster, monster:getPosition())
+			end
+			tagged = tagged + 1
+		end
+	end
+	logger.info("[PrimalHazardStartup] Hazard flag applied to {} monsters in {}", tagged, hazardZone:getName())
+	return true
+end
+hazardStartup:register()

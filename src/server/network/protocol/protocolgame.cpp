@@ -1429,6 +1429,7 @@ void ProtocolGame::onRecvFirstMessage(NetworkMessage &msg) {
 		auto output = OutputMessagePool::getOutputMessage();
 		output->addByte(0x14);
 		output->addString(ss.str());
+		addLoginErrorReason(output);
 		send(output);
 		[[maybe_unused]] auto eventId = scheduleProtocolTask(
 			1000, [self = getThis()] { self->disconnect(); }, "ProtocolGame::disconnect"
@@ -1487,10 +1488,19 @@ void ProtocolGame::sendLoginChallenge() {
 	send(output);
 }
 
+// Clients 15.23+ read a reason byte after the login error message; without it the official client
+// fails to parse the packet and closes instead of showing the message (#4153)
+void ProtocolGame::addLoginErrorReason(const OutputMessage_ptr &output) const {
+	if (!oldProtocol && version >= 1523) {
+		output->addByte(0x00);
+	}
+}
+
 void ProtocolGame::disconnectClient(const std::string &message) const {
 	auto output = OutputMessagePool::getOutputMessage();
 	output->addByte(0x14);
 	output->addString(message);
+	addLoginErrorReason(output);
 	send(output);
 	disconnect();
 }

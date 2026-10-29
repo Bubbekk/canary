@@ -1244,6 +1244,20 @@ void Combat::combatTileEffects(const CreatureVector &spectators, const std::shar
 		ReturnValue ret = g_game().internalAddItem(tile, item);
 		if (ret == RETURNVALUE_NOERROR) {
 			item->startDecaying();
+
+			// A field created on an occupied tile must affect who is already standing there, as when they
+			// step in; otherwise field runes did no damage to the creature they were cast on (#3584).
+			// Only damaging fields: safe magic walls and wild growth are removed by onStepInField
+			if (const auto &magicField = item->getMagicField(); magicField && !magicField->isBlocking() && Item::items[item->getID()].conditionDamage) {
+				if (const auto* creatures = tile->getCreatures()) {
+					const CreatureVector creaturesOnTile = *creatures;
+					for (const auto &creature : creaturesOnTile) {
+						if (creature && !creature->isRemoved()) {
+							magicField->onStepInField(creature);
+						}
+					}
+				}
+			}
 		}
 	}
 

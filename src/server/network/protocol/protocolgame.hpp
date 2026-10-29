@@ -138,6 +138,7 @@ private:
 	}
 	void connect(const std::string &playerName, OperatingSystem_t operatingSystem);
 	void disconnectClient(const std::string &message) const;
+	void addLoginErrorReason(const OutputMessage_ptr &output) const;
 	void writeToOutputBuffer(NetworkMessage &msg);
 	[[nodiscard]] bool shouldSuppressPreLoginPacket() const;
 	[[nodiscard]] bool isSessionEnding() const;
