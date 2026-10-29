@@ -1,6 +1,8 @@
 local config = {
 	enabled = true,
 	messageStyle = MESSAGE_LOOK,
+	-- Gold per !withdraw: creating huge amounts of coins at once freezes the server (#3374)
+	maxWithdraw = 1000000,
 }
 
 if not config.enabled then
@@ -26,7 +28,7 @@ function deposit.onSay(player, words, param)
 		amount = player:getMoney()
 	else
 		amount = tonumber(param)
-		if not amount or amount <= 0 and isValidMoney(amount) then
+		if not amount or amount ~= math.floor(amount) or not isValidMoney(amount) then
 			player:sendTextMessage(config.messageStyle, "Invalid amount.")
 			return true
 		end
@@ -49,8 +51,13 @@ local withdraw = TalkAction("!withdraw")
 
 function withdraw.onSay(player, words, param)
 	local amount = tonumber(param)
-	if not amount or amount <= 0 and isValidMoney(amount) then
+	if not amount or amount ~= math.floor(amount) or not isValidMoney(amount) then
 		player:sendTextMessage(config.messageStyle, "Invalid amount.")
+		return true
+	end
+
+	if amount > config.maxWithdraw then
+		player:sendTextMessage(config.messageStyle, "You can withdraw at most " .. FormatNumber(config.maxWithdraw) .. " gold coins at once.")
 		return true
 	end
 
@@ -72,7 +79,7 @@ local transfer = TalkAction("!transfer")
 function transfer.onSay(player, words, param)
 	local split = param:split(",")
 	local amount = tonumber(split[2])
-	if not amount or amount <= 0 and isValidMoney(amount) then
+	if not amount or amount ~= math.floor(amount) or not isValidMoney(amount) then
 		player:sendTextMessage(config.messageStyle, "Invalid amount.")
 		return true
 	end
