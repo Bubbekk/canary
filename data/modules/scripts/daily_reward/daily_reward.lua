@@ -444,7 +444,7 @@ function Player.selectDailyReward(self, msg)
 		rewardCount = dailyTable.premiumAccount
 	end
 	-- Bonus VIP: las cuentas VIP reciben un 50% extra en la recompensa diaria
-	if configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) and self:isVip() and type(rewardCount) == "number" then
+	if configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) and self:isVip() and tonumber(rewardCount) ~= nil then
 		rewardCount = math.min(255, math.floor(rewardCount * VIP_DAILY_REWARD_MULTIPLIER))
 	end
 
@@ -678,7 +678,7 @@ function Player.readDailyReward(self, msg, currentDay, state)
 	if state == DAILY_REWARD_STATUS_PREMIUM then
 		itemsToPick = dailyTable.premiumAccount
 		-- Mostrar el bonus VIP en el muro de recompensas (debe coincidir con selectDailyReward)
-		if configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) and self:isVip() and type(itemsToPick) == "number" then
+		if configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) and self:isVip() and tonumber(itemsToPick) ~= nil then
 			itemsToPick = math.min(255, math.floor(itemsToPick * VIP_DAILY_REWARD_MULTIPLIER))
 		end
 	end
