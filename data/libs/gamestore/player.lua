@@ -41,7 +41,10 @@ local function canBuyOffer(self, offer)
 				disabledReason = "You already have a " .. ItemType(item:getId()):getName() .. "."
 			end
 		elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_BLESSINGS then
-			if self:getBlessingCount(offer.blessid) >= 5 then
+			if offer.blessid == 1 and not Blessings.Config.HasToF then
+				disabled = 1
+				disabledReason = "Twist of Fate is not available on this world."
+			elseif self:getBlessingCount(offer.blessid) >= 5 then
 				disabled = 1
 				disabledReason = "You reached the maximum amount for this blessing."
 			end
@@ -118,15 +121,22 @@ local function canBuyOffer(self, offer)
 				disabledReason = "You already have 3 slots released."
 			end
 		elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_EXPBOOST then
-			local playerKV = self:kv()
-			local purchaseExpCount = playerKV:get(GameStore.Kv.expBoostCount) or 0
-			if purchaseExpCount == GameStore.ItemLimit.EXPBOOST then
+			if GameStore.getExpBoostPurchases(self) >= GameStore.getExpBoostLimit(self) then
 				disabled = 1
 				disabledReason = "You can't buy XP Boost for today."
 			end
 			if self:getXpBoostTime() > 0 then
 				disabled = 1
 				disabledReason = "You already have an active XP boost."
+			end
+		elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_PREMIUM and offer.id == GameStore.FREE_PREMIUM_DAY_OFFER_ID then
+			local remaining = GameStore.getFreePremiumRemaining(self)
+			if remaining == nil then
+				disabled = 1
+				disabledReason = "The free premium day is temporarily unavailable."
+			elseif remaining > 0 then
+				disabled = 1
+				disabledReason = string.format("You already claimed your free premium day. You can claim it again in %d day(s).", math.ceil(remaining / 86400))
 			end
 		elseif offer.type == GameStore.OfferTypes.OFFER_TYPE_HIRELING then
 			if self:getHirelingsCount() >= GameStore.ItemLimit.HIRELING then
@@ -256,28 +266,35 @@ local function makeCoinTransaction(self, offer, desc)
 	end
 
 	local isExpBoost = offer.type == GameStore.OfferTypes.OFFER_TYPE_EXPBOOST
+	-- XP Boost: precio segun las compras del periodo (sin modificar offer.price, que es compartido)
+	local basePrice = offer.price
 	if isExpBoost then
-		local playerKV = self:kv()
-		local expBoostCount = tonumber(playerKV:get(GameStore.Kv.expBoostCount)) or 0
-		if expBoostCount <= 0 or expBoostCount > 5 then
-			expBoostCount = 1
+		basePrice = GameStore.getExpBoostPrice(self)
+		if not basePrice then
+			return false
 		end
-		local priceTable = GameStore.ExpBoostValues
-		if GameStore.ExpBoostValuesCustom then
-			priceTable = GameStore.ExpBoostValuesCustom
-		end
-		offer.price = priceTable[expBoostCount] or priceTable[1]
-		playerKV:set(GameStore.Kv.expBoostCount, expBoostCount + 1)
 	end
 
-	if offer.coinType == GameStore.CoinType.Coin and self:canRemoveCoins(offer.price) then
-		op = self:removeCoinsBalance(offer.price)
-	elseif offer.coinType == GameStore.CoinType.Transferable and self:canPayForOffer(offer.price, offer.coinType) then
-		op = removeCombinedCoinsBalance(self, offer.price)
+	-- Precio final (con descuento VIP si corresponde); el mismo que se muestra en la tienda
+	local price = GameStore.applyVipDiscount(self, offer, basePrice)
+
+	-- Ofertas gratuitas: no hay monedas que descontar, solo se registra en el historial
+	if not isExpBoost and (price or 0) == 0 then
+		GameStore.insertHistory(self:getAccountId(), GameStore.HistoryTypes.HISTORY_TYPE_NONE, desc, 0, offer.coinType)
+		return true
+	end
+
+	if offer.coinType == GameStore.CoinType.Coin and self:canRemoveCoins(price) then
+		op = self:removeCoinsBalance(price)
+	elseif offer.coinType == GameStore.CoinType.Transferable and self:canPayForOffer(price, offer.coinType) then
+		op = removeCombinedCoinsBalance(self, price)
 	end
 
 	if op then
-		GameStore.insertHistory(self:getAccountId(), GameStore.HistoryTypes.HISTORY_TYPE_NONE, desc, offer.price * -1, offer.coinType)
+		GameStore.insertHistory(self:getAccountId(), GameStore.HistoryTypes.HISTORY_TYPE_NONE, desc, price * -1, offer.coinType)
+		if isExpBoost then
+			GameStore.registerExpBoostPurchase(self)
+		end
 	end
 
 	return op

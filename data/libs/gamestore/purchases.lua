@@ -38,6 +38,14 @@ local function processChargesPurchase(player, offerId, name, charges, movable, s
 end
 
 local function processSingleBlessingPurchase(player, blessId, count)
+	-- Twist of Fate no tiene efecto en mundos retro-PvP (Blessings.Config.HasToF)
+	if blessId == 1 and not Blessings.Config.HasToF then
+		return error({ code = 1, message = "Twist of Fate is not available on this world." })
+	end
+	-- Validar el máximo también en el servidor (antes solo lo comprobaba la interfaz)
+	if player:getBlessingCount(blessId) + count > 5 then
+		return error({ code = 1, message = "You reached the maximum amount for this blessing." })
+	end
 	player:addBlessing(blessId, count)
 end
 
@@ -67,13 +75,79 @@ local function processInstantRewardAccess(player, offerCount)
 end
 
 local function processCharmsPurchase(player)
+	if player:charmExpansion() then
+		return error({ code = 1, message = "You already have charm expansion." })
+	end
 	player:charmExpansion(true)
 end
 
+-- Día de premium gratis: una vez cada GameStore.FREE_PREMIUM_COOLDOWN segundos por CUENTA.
+-- El reclamo se guarda al instante en MySQL (no en KV, que solo se escribe al guardar el servidor),
+-- así un reinicio o caída no permite reclamarlo dos veces. Ante cualquier fallo de base de datos se deniega.
+local freePremiumTableReady = false
+
+local function ensureFreePremiumTable()
+	if not freePremiumTableReady then
+		freePremiumTableReady = db.query("CREATE TABLE IF NOT EXISTS `store_free_premium` (`account_id` INT UNSIGNED NOT NULL, `last_claim` BIGINT NOT NULL DEFAULT 0, PRIMARY KEY (`account_id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4") == true
+	end
+	return freePremiumTableReady
+end
+
+local function getFreePremiumLastClaim(accountId)
+	local resultId = db.storeQuery("SELECT `last_claim` FROM `store_free_premium` WHERE `account_id` = " .. accountId)
+	if not resultId then
+		return 0
+	end
+	local lastClaim = Result.getNumber(resultId, "last_claim") or 0
+	Result.free(resultId)
+	return lastClaim
+end
+
+-- Segundos que faltan para volver a reclamar (0 = disponible). nil si la base de datos no está disponible.
+local function getFreePremiumRemaining(player)
+	if not ensureFreePremiumTable() then
+		return nil
+	end
+	local remaining = getFreePremiumLastClaim(player:getAccountId()) + GameStore.FREE_PREMIUM_COOLDOWN - os.time()
+	return remaining > 0 and remaining or 0
+end
+
+-- Registra el reclamo de forma atómica: solo actualiza si ya pasó el periodo de espera.
+local function claimFreePremium(player)
+	local accountId = player:getAccountId()
+	local now = os.time()
+	local query = string.format(
+		"INSERT INTO `store_free_premium` (`account_id`, `last_claim`) VALUES (%d, %d) ON DUPLICATE KEY UPDATE `last_claim` = IF(`last_claim` <= %d, VALUES(`last_claim`), `last_claim`)",
+		accountId, now, now - GameStore.FREE_PREMIUM_COOLDOWN
+	)
+	if not db.query(query) then
+		return false
+	end
+	return getFreePremiumLastClaim(accountId) == now
+end
+
 local function processPremiumPurchase(player, offerId)
-	player:addPremiumDays(offerId - 3000)
+	local days = offerId - 3000
+	if player:getPremiumDays() >= GameStore.PERMANENT_PREMIUM_DAYS - 365 then
+		return error({ code = 1, message = "You already have permanent premium time." })
+	end
+
+	if offerId == GameStore.FREE_PREMIUM_DAY_OFFER_ID then
+		local remaining = getFreePremiumRemaining(player)
+		if remaining == nil then
+			return error({ code = 1, message = "The free premium day is temporarily unavailable." })
+		end
+		if remaining > 0 then
+			return error({ code = 1, message = string.format("You already claimed your free premium day. You can claim it again in %d day(s).", math.ceil(remaining / 86400)) })
+		end
+		if not claimFreePremium(player) then
+			return error({ code = 1, message = "The free premium day is temporarily unavailable." })
+		end
+	end
+
+	player:addPremiumDays(days)
 	if configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) then
-		player:onAddVip(offerId - 3000)
+		player:onAddVip(days)
 	end
 end
 
@@ -137,7 +211,7 @@ local function processHouseRelatedPurchase(player, offer)
 			if isCaskItem(itemId) then
 				local decoKit = inbox:addItem(ITEM_DECORATION_KIT, 1)
 				if decoKit then
-					decoKit:setAttribute(ITEM_ATTRIBUTE_DESCRIPTION, "You bought this item in the Store.\nUnwrap it in your own house to create a <" .. ItemType(itemId):getName() .. ">.")
+					decoKit:setAttribute(ITEM_ATTRIBUTE_DESCRIPTION, "Compraste este objeto en la Tienda.\nDesenvu\233lvelo en tu propia casa para crear: <" .. ItemType(itemId):getName() .. ">.")
 					decoKit:setCustomAttribute("unWrapId", itemId)
 					decoKit:setAttribute(ITEM_ATTRIBUTE_DATE, offer.count)
 
@@ -149,7 +223,7 @@ local function processHouseRelatedPurchase(player, offer)
 				for i = 1, offer.count do
 					local decoKit = inbox:addItem(ITEM_DECORATION_KIT, 1)
 					if decoKit then
-						decoKit:setAttribute(ITEM_ATTRIBUTE_DESCRIPTION, "You bought this item in the Store.\nUnwrap it in your own house to create a <" .. ItemType(itemId):getName() .. ">.")
+						decoKit:setAttribute(ITEM_ATTRIBUTE_DESCRIPTION, "Compraste este objeto en la Tienda.\nDesenvu\233lvelo en tu propia casa para crear: <" .. ItemType(itemId):getName() .. ">.")
 						decoKit:setCustomAttribute("unWrapId", itemId)
 
 						if not offer.movable then
@@ -242,6 +316,13 @@ local function processSexChangePurchase(player)
 end
 
 local function processExpBoostPurchase(player)
+	-- Validaciones en el servidor (antes solo las hacia la interfaz)
+	if player:getXpBoostTime() > 0 then
+		return error({ code = 1, message = "You already have an active XP boost." })
+	end
+	if GameStore.getExpBoostPurchases(player) >= GameStore.getExpBoostLimit(player) then
+		return error({ code = 1, message = "You can't buy XP Boost for today." })
+	end
 	local currentXpBoostTime = player:getXpBoostTime()
 	player:setXpBoostPercent(50)
 	player:setXpBoostTime(currentXpBoostTime + 3600)
@@ -274,6 +355,17 @@ local function processTempleTeleportPurchase(player)
 	local inFight = player:isPzLocked() or player:getCondition(CONDITION_INFIGHT, CONDITIONID_DEFAULT)
 	if not inPz and inFight then
 		return error({ code = 0, message = "You can't use temple teleport in fight!" })
+	end
+
+	-- Lo que promete la descripcion de la Tienda: no funciona en zonas sin cierre de sesion
+	-- (salas de jefes, misiones) ni cerca del templo del personaje.
+	if player:getTile():hasFlag(TILESTATE_NOLOGOUT) then
+		return error({ code = 0, message = "You can't use temple teleport in a no-logout zone." })
+	end
+	local temple = player:getTown():getTemplePosition()
+	local position = player:getPosition()
+	if position.z == temple.z and math.max(math.abs(position.x - temple.x), math.abs(position.y - temple.y)) <= 10 then
+		return error({ code = 0, message = "You are already close to your home temple." })
 	end
 
 	player:teleportTo(player:getTown():getTemplePosition())
@@ -476,6 +568,7 @@ purchases.processAllBlessingsPurchase = processAllBlessingsPurchase
 purchases.processInstantRewardAccess = processInstantRewardAccess
 purchases.processCharmsPurchase = processCharmsPurchase
 purchases.processPremiumPurchase = processPremiumPurchase
+purchases.getFreePremiumRemaining = getFreePremiumRemaining
 purchases.processStackablePurchase = processStackablePurchase
 purchases.processHouseRelatedPurchase = processHouseRelatedPurchase
 purchases.processOutfitPurchase = processOutfitPurchase

@@ -59,6 +59,15 @@ end
 
 GameStore.Categories = catalogLoader.getCategories()
 
+-- Las ofertas de las subcategorias de "Consumables" tienen descuento VIP
+for _, category in ipairs(GameStore.Categories) do
+	if category.parent == "Consumables" and category.offers then
+		for _, offer in ipairs(category.offers) do
+			offer.vipDiscount = true
+		end
+	end
+end
+
 -- Each outfit must be uniquely identified to distinguish between addons.
 -- Here we dynamically assign ids for outfits. These ids must be unique.
 local runningId = 45000

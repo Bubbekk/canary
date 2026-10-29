@@ -8,7 +8,7 @@ function playerLoginGlobal.onLogin(player)
 	-- Welcome
 	local loginStr
 	if player:getLastLoginSaved() == 0 then
-		loginStr = "Please choose your outfit."
+		loginStr = "Por favor, elige tu atuendo."
 		player:sendOutfitWindow()
 		local startStreakLevel = configManager.getNumber(configKeys.START_STREAK_LEVEL)
 		if startStreakLevel > 0 then
@@ -17,7 +17,7 @@ function playerLoginGlobal.onLogin(player)
 
 		db.query("UPDATE `players` SET `istutorial` = 0 WHERE `id` = " .. player:getGuid())
 	else
-		loginStr = string.format("Your last visit in %s: %s.", SERVER_NAME, os.date("%d %b %Y %X", player:getLastLoginSaved()))
+		loginStr = string.format("Tu \250ltima visita a %s: %s.", SERVER_NAME, os.date("%d/%m/%Y %H:%M:%S", player:getLastLoginSaved()))
 	end
 	player:sendTextMessage(MESSAGE_LOGIN, loginStr)
 
@@ -35,7 +35,7 @@ function playerLoginGlobal.onLogin(player)
 
 	-- Boosted
 	player:sendTextMessage(MESSAGE_BOOSTED_CREATURE, string.format("Today's boosted creature: %s.", Game.getBoostedCreature()))
-	player:sendTextMessage(MESSAGE_BOOSTED_CREATURE, string.format("Today's boosted boss: %s.", Game.getBoostedBoss()))
+	player:sendTextMessage(MESSAGE_BOOSTED_CREATURE, string.format("Jefe potenciado de hoy: %s.", Game.getBoostedBoss()))
 
 	-- Rewards
 	local rewards = #player:getRewardList()
@@ -91,7 +91,7 @@ function playerLoginGlobal.onLogin(player)
 			if vipBonusExp > 0 and player:isVip() then
 				vipBonusExp = (vipBonusExp > 100 and 100) or vipBonusExp
 				baseRate = baseRate * (1 + (vipBonusExp / 100))
-				player:sendTextMessage(MESSAGE_BOOSTED_CREATURE, "Normal base xp is: " .. baseRate .. "%, because you are VIP, bonus of " .. vipBonusExp .. "%")
+				player:sendTextMessage(MESSAGE_BOOSTED_CREATURE, "Tu experiencia base es " .. baseRate .. "% por ser VIP (bonus de " .. vipBonusExp .. "%).")
 			end
 		end
 

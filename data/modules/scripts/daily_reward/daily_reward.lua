@@ -52,6 +52,9 @@ local DAILY_REWARD_TYPE_STORAGE = 2
 local DAILY_REWARD_TYPE_PREY_REROLL = 3
 local DAILY_REWARD_TYPE_XP_BOOST = 4
 
+-- Multiplicador de la recompensa diaria para cuentas VIP
+local VIP_DAILY_REWARD_MULTIPLIER = 1.5
+
 -- Client Types
 local DAILY_REWARD_SYSTEM_SKIP = 1
 local DAILY_REWARD_SYSTEM_TYPE_ONE = 1
@@ -440,6 +443,10 @@ function Player.selectDailyReward(self, msg)
 	if (configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) and self:isVip()) or self:isPremium() then
 		rewardCount = dailyTable.premiumAccount
 	end
+	-- Bonus VIP: las cuentas VIP reciben un 50% extra en la recompensa diaria
+	if configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) and self:isVip() and type(rewardCount) == "number" then
+		rewardCount = math.min(255, math.floor(rewardCount * VIP_DAILY_REWARD_MULTIPLIER))
+	end
 
 	local dailyRewardMessage = false
 
@@ -670,6 +677,10 @@ function Player.readDailyReward(self, msg, currentDay, state)
 	local itemsToPick = dailyTable.freeAccount
 	if state == DAILY_REWARD_STATUS_PREMIUM then
 		itemsToPick = dailyTable.premiumAccount
+		-- Mostrar el bonus VIP en el muro de recompensas (debe coincidir con selectDailyReward)
+		if configManager.getBoolean(configKeys.VIP_SYSTEM_ENABLED) and self:isVip() and type(itemsToPick) == "number" then
+			itemsToPick = math.min(255, math.floor(itemsToPick * VIP_DAILY_REWARD_MULTIPLIER))
+		end
 	end
 
 	if systemType == DAILY_REWARD_SYSTEM_TYPE_ONE then
