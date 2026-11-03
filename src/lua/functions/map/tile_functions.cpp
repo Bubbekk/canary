@@ -49,6 +49,7 @@ void TileFunctions::init(lua_State* L) {
 
 	Lua::registerMethod(L, "Tile", "hasProperty", TileFunctions::luaTileHasProperty);
 	Lua::registerMethod(L, "Tile", "hasFlag", TileFunctions::luaTileHasFlag);
+	Lua::registerMethod(L, "Tile", "setZoneFlag", TileFunctions::luaTileSetZoneFlag);
 
 	Lua::registerMethod(L, "Tile", "queryAdd", TileFunctions::luaTileQueryAdd);
 	Lua::registerMethod(L, "Tile", "addItem", TileFunctions::luaTileAddItem);
@@ -595,6 +596,31 @@ int TileFunctions::luaTileHasFlag(lua_State* L) {
 	} else {
 		lua_pushnil(L);
 	}
+	return 1;
+}
+
+int TileFunctions::luaTileSetZoneFlag(lua_State* L) {
+	// tile:setZoneFlag(flag, enabled)
+	// Only zone flags may be changed, so scripts cannot corrupt the item-derived tile state.
+	const auto &tile = Lua::getUserdataShared<Tile>(L, 1, "Tile");
+	if (!tile) {
+		lua_pushnil(L);
+		return 1;
+	}
+
+	constexpr uint32_t zoneFlags = TILESTATE_PROTECTIONZONE | TILESTATE_NOPVPZONE | TILESTATE_NOLOGOUT | TILESTATE_PVPZONE;
+	const auto flag = Lua::getNumber<uint32_t>(L, 2);
+	if (flag == 0 || (flag & ~zoneFlags) != 0) {
+		Lua::pushBoolean(L, false);
+		return 1;
+	}
+
+	if (Lua::getBoolean(L, 3, true)) {
+		tile->setFlag(flag);
+	} else {
+		tile->resetFlag(flag);
+	}
+	Lua::pushBoolean(L, true);
 	return 1;
 }
 
