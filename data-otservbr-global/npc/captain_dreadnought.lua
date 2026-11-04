@@ -223,6 +223,25 @@ end
 
 buildStrings()
 
+-- Town the player confirmed while carrying too much gold, so donating can finish the trip
+local pendingTown = {}
+
+local function sailTo(npc, creature, player, townId)
+	pendingTown[player:getId()] = nil
+	player:setTown(Town(townId))
+	player:teleportTo(towns[townId].destination)
+	player:getPosition():sendMagicEffect(CONST_ME_TELEPORT)
+	player:setStorageValue(Storage.Dawnport.Mainland, 1)
+	npcHandler:say(
+		"Cast off! Don't forget to talk to the guide at the port for directions to nearest bars... err, shops and \z
+		bank and such!",
+		npc,
+		creature
+	)
+	npcHandler:resetNpc(npc, creature)
+	npcHandler:removeInteraction(npc, creature)
+end
+
 -- Function to handle donations and its messages
 local function donationHandler(npc, creature, message, keywords, parameters, node)
 	local player = Player(creature)
@@ -234,6 +253,12 @@ local function donationHandler(npc, creature, message, keywords, parameters, nod
 	elseif parameters.confirm == true then
 		if player:getMoney() > npcConfig.moneyToNeedDonation then
 			player:removeMoney((player:getMoney() - npcConfig.moneyToNeedDonation))
+			local townId = pendingTown[playerId]
+			if townId then
+				npcHandler:say("Well, that's really generous of you. That'll feed a lot of hungry mouths for a while.", npc, creature)
+				sailTo(npc, creature, player, townId)
+				return true
+			end
 			npcHandler:say(
 				"Well, that's really generous of you. That'll feed a lot of hungry mouths for a while. \z
 				Right, now which {city} did you say you wanted to go to?",
@@ -278,29 +303,19 @@ local function townTravelHandler(npc, creature, message, keywords, parameters, n
 			npcHandler:say(town.message .. " What do you say, {yes} or {no}?", npc, creature)
 		end
 	elseif parameters.confirm == true then
+		-- Every confirm node carries its own townId: a shared node would sail to whichever town registered it last
+		local townId = parameters.townId
 		-- Handle money excess at confirm or it may be dropped and picked up in previous steps
 		if player:getMoney() > npcConfig.moneyToNeedDonation then
+			pendingTown[playerId] = townId
 			npcHandler:say("By tempest! What's all this gold weighing us down? Don't you think that's a little risky with all \z
-				these pirates around? You can take " .. npcConfig.moneyToNeedDonation .. " with you, but that's it. Drop the rest or {donate} it to the \z
-				Adventurers' Orphans Fund, really.", npc, creature)
+				these pirates around? You can take " .. npcConfig.moneyToNeedDonation .. " with you, but that's it. Drop the rest and say {yes} again, \z
+				or {donate} it to the Adventurers' Orphans Fund and we sail right away.", npc, creature)
+			-- Stay on the town question so a plain "yes" retries once the gold is dropped
+			npcHandler.keywordHandler:moveUp(creature, 1)
 			return true
 		end
-		local parentNode = node:getParent()
-		local parentParameters = parentNode:getParameters()
-		local townId = parentParameters.townId or parameters.townId
-		local town = Town(townId)
-		player:setTown(town)
-		player:teleportTo(towns[townId].destination)
-		player:getPosition():sendMagicEffect(CONST_ME_TELEPORT)
-		player:setStorageValue(Storage.Dawnport.Mainland, 1)
-		npcHandler:say(
-			"Cast off! Don't forget to talk to the guide at the port for directions to nearest bars... err, shops and \z
-			bank and such!",
-			npc,
-			creature
-		)
-		npcHandler:resetNpc(npc, creature)
-		npcHandler:removeInteraction(npc, creature)
+		sailTo(npc, creature, player, townId)
 	elseif parameters.decline == true then
 		if player:isPremium() then
 			npcHandler:say("Changed your mind? Which city do you want to head to, " .. townNames.premium .. "?", npc, creature)
@@ -411,14 +426,15 @@ local sailNode = keywordHandler:addKeyword({ "sail" }, StdModule.say, {
 	npcHandler = npcHandler,
 	text = "So, you've decided on your new home city? Which one will it be?",
 })
-local confirmNode = KeywordNode:new({ "yes" }, townTravelHandler, { confirm = true })
-local declineNode = KeywordNode:new({ "no" }, townTravelHandler, { decline = true })
 for id, town in pairs(towns) do
 	local townSailNode = KeywordNode:new({ town.name:lower() }, townTravelHandler, { townId = id })
-	townSailNode:addChildKeywordNode(confirmNode)
-	townSailNode:addChildKeywordNode(declineNode)
+	townSailNode:addChildKeywordNode(KeywordNode:new({ "yes" }, townTravelHandler, { confirm = true, townId = id }))
+	townSailNode:addChildKeywordNode(KeywordNode:new({ "no" }, townTravelHandler, { decline = true }))
 	sailNode:addChildKeywordNode(townSailNode)
 	aboutSailNode:addChildKeywordNode(townSailNode)
+	if town.canBeSailed then
+		keywordHandler:getRoot():addChildKeywordNode(townSailNode)
+	end
 end
 keywordHandler:addAliasKeyword({ "passage" })
 keywordHandler:addAliasKeyword({ "travel" })
