@@ -415,7 +415,13 @@ function Player:addItemStoreInboxEx(item, movable, setOwner)
 	elseif setOwner then
 		item:setOwner(self)
 	end
-	inbox:addItemEx(item, INDEX_WHEREEVER, FLAG_NOLIMIT)
+	local ret = inbox:addItemEx(item, INDEX_WHEREEVER, FLAG_NOLIMIT)
+	if ret ~= RETURNVALUE_NOERROR then
+		-- The inbox refused the item: report it so purchases are cancelled instead of charged for nothing
+		logger.error("[Player:addItemStoreInboxEx] {} could not receive item {} in the store inbox (return value {})", self:getName(), item:getId(), tostring(ret))
+		item:remove()
+		return nil
+	end
 	return item
 end
 
@@ -448,7 +454,10 @@ function Player:addItemStoreInbox(itemId, amount, movable, setOwner)
 				return nil
 			end
 
-			self:addItemStoreInboxEx(stackItem, movable, setOwner)
+			if not self:addItemStoreInboxEx(stackItem, movable, setOwner) then
+				batchUpdate:delete()
+				return nil
+			end
 			amount = amount - stackSize
 		end
 	end

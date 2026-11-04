@@ -20,7 +20,13 @@ local function processItemPurchase(player, offerId, offerCount, movable, setOwne
 	end
 
 	for t = 1, offerCount do
-		player:addItemStoreInbox(offerId, 1, movable, setOwner)
+		if not player:addItemStoreInbox(offerId, 1, movable, setOwner) then
+			if batchUpdate then
+				batchUpdate:delete()
+			end
+			-- Raised before the coin transaction, so the purchase is not charged
+			return error({ code = 1, message = "The item could not be delivered to your Store inbox. You were not charged." })
+		end
 	end
 
 	if batchUpdate then
@@ -34,7 +40,9 @@ local function processChargesPurchase(player, offerId, name, charges, movable, s
 		return error({ code = 0, message = errorMsg })
 	end
 
-	player:addItemStoreInbox(offerId, charges, movable, setOwner)
+	if not player:addItemStoreInbox(offerId, charges, movable, setOwner) then
+		return error({ code = 1, message = "The item could not be delivered to your Store inbox. You were not charged." })
+	end
 end
 
 local function processSingleBlessingPurchase(player, blessId, count)
