@@ -960,7 +960,8 @@ return function(api)
 		if not itemId or itemId <= 0 then
 			return nil
 		end
-		local item = game.createItem(itemId, 1)
+		local count = (not wrappedItemId and tonumber(offer.count)) or 1
+		local item = game.createItem(itemId, math.max(1, math.floor(count)))
 		if not item then
 			return nil
 		end
