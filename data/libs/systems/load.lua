@@ -1,6 +1,7 @@
 -- Load systems functions
 dofile(CORE_DIRECTORY .. "/libs/systems/battle_royale_core.lua")
 dofile(CORE_DIRECTORY .. "/libs/systems/bounty_core.lua")
+dofile(CORE_DIRECTORY .. "/libs/systems/low_level_protection_core.lua")
 dofile(CORE_DIRECTORY .. "/libs/systems/blessing.lua")
 dofile(CORE_DIRECTORY .. "/libs/systems/concoctions.lua")
 dofile(CORE_DIRECTORY .. "/libs/systems/daily_reward.lua")

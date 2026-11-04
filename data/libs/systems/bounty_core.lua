@@ -9,7 +9,7 @@ Core.config = {
 	feePercent = 10, -- kept by the server on placement, never refunded: makes coin ping-pong between friends cost money
 	durations = { 1, 6, 12, 24, 48, 72 }, -- hours a bounty may last
 	maxActivePerPlacer = 5,
-	minTargetLevel = 50,
+	minTargetLevel = 51, -- level 50 and below are protected from death (low_level_protection_core.lua)
 	recentHitMs = 60 * 1000, -- only attackers that hit the target in the last minute share the reward
 	listSize = 10,
 }
