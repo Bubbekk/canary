@@ -184,8 +184,8 @@ return function(api)
 			{
 				kind = 0,
 				id = 3043,
-				name = "crystal coin",
-				description = "A compact reward for a successful hunt.",
+				name = "Crystal coin",
+				description = "Una recompensa compacta por una buena cacer\237a.",
 				price = 100,
 			},
 		},
