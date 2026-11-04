@@ -60,8 +60,10 @@ local function parseRequestStoreOffersTail(oldProtocol, msg)
 		return
 	end
 
-	msg:getByte()
-	msg:getByte()
+	-- Optional trailing bytes: OTClient does not always send them
+	for _ = 1, math.min(2, msg:getUnreadBytes()) do
+		msg:getByte()
+	end
 end
 
 local function onRecvbyte(player, msg, byte)
