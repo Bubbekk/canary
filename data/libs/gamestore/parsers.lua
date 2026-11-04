@@ -405,6 +405,16 @@ local function parseBuyStoreOffer(playerId, msg)
 end
 
 -- Both functions use same formula!
+-- OTClient sends the history requests without the entries-per-page byte; reading it anyway made the
+-- query ask for 0 rows ("You don't have any entries yet") and logged a getByte error.
+local function readEntriesPerPage(msg)
+	local entriesPerPage = msg:getUnreadBytes() >= 1 and msg:getByte() or 0
+	if entriesPerPage < 1 or entriesPerPage > 50 then
+		entriesPerPage = 26
+	end
+	return entriesPerPage
+end
+
 local function parseOpenTransactionHistory(playerId, msg)
 	local player = Player(playerId)
 	if not player then
@@ -412,7 +422,7 @@ local function parseOpenTransactionHistory(playerId, msg)
 	end
 
 	local page = 1
-	local entriesPerPage = msg:getByte()
+	local entriesPerPage = readEntriesPerPage(msg)
 	sendStoreTransactionHistory(playerId, page, entriesPerPage)
 	player:updateUIExhausted()
 end
@@ -423,8 +433,8 @@ local function parseRequestTransactionHistory(playerId, msg)
 		return
 	end
 
-	local page = msg:getU32()
-	local entriesPerPage = msg:getByte()
+	local page = msg:getUnreadBytes() >= 4 and msg:getU32() or 0
+	local entriesPerPage = readEntriesPerPage(msg)
 	sendStoreTransactionHistory(playerId, page + 1, entriesPerPage)
 	player:updateUIExhausted()
 end

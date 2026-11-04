@@ -418,7 +418,7 @@ function Player:addItemStoreInboxEx(item, movable, setOwner)
 	local ret = inbox:addItemEx(item, INDEX_WHEREEVER, FLAG_NOLIMIT)
 	if ret ~= RETURNVALUE_NOERROR then
 		-- The inbox refused the item: report it so purchases are cancelled instead of charged for nothing
-		logger.error("[Player:addItemStoreInboxEx] {} could not receive item {} in the store inbox (return value {})", self:getName(), item:getId(), tostring(ret))
+		logger.error("[Player:addItemStoreInboxEx] {} could not receive item {} in the store inbox (return value {}, item owner {}, inbox owner {}, player guid {} id {})", self:getName(), item:getId(), tostring(ret), item:getOwnerId(), inbox:getOwnerId(), self:getGuid(), self:getId())
 		item:remove()
 		return nil
 	end
