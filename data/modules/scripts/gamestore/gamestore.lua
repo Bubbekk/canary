@@ -59,6 +59,50 @@ end
 
 GameStore.Categories = catalogLoader.getCategories()
 
+-- Precios personalizados de RoT (multiplicadores por categoría y overrides por id).
+-- Se aplican antes de asignar ids dinámicos, por lo que también afecta a las
+-- ofertas con precio en tabla (count/price múltiples).
+local storePrices = dofile(CORE_DIRECTORY .. "/modules/scripts/gamestore/store_prices.lua")
+local function applyStorePrices()
+	local multipliers = storePrices.multipliers or {}
+	local overrides = storePrices.overrides or {}
+	local byId = overrides.byId or {}
+	local byName = overrides.byName or {}
+
+	for _, category in ipairs(GameStore.Categories) do
+		if category.offers then
+			for _, offer in ipairs(category.offers) do
+				local fixed = byId[offer.id] or (offer.name and byName[offer.name])
+				local multiplier = multipliers[category.name] or 1.0
+
+				if fixed ~= nil then
+					if type(offer.price) == "table" then
+						for i = 1, #offer.price do
+							offer.price[i] = fixed
+						end
+					else
+						offer.price = fixed
+					end
+				elseif multiplier ~= 1.0 then
+					if type(offer.price) == "table" then
+						for i = 1, #offer.price do
+							if type(offer.price[i]) == "number" and offer.price[i] > 0 then
+								offer.price[i] = math.max(1, math.floor(offer.price[i] * multiplier + 0.5))
+							end
+						end
+					elseif type(offer.price) == "number" and offer.price > 0 then
+						offer.price = math.max(1, math.floor(offer.price * multiplier + 0.5))
+					end
+				end
+			end
+		end
+	end
+
+	-- La tabla de XP Boost se lee de forma dinámica en store.lua.
+	GameStore.ExpBoostValuesCustom = storePrices.expBoost
+end
+applyStorePrices()
+
 -- Las ofertas de las subcategorias de "Consumables" tienen descuento VIP
 for _, category in ipairs(GameStore.Categories) do
 	if category.parent == "Consumables" and category.offers then
