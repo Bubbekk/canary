@@ -8775,6 +8775,15 @@
         "source": "src/lua/functions/map/tile_functions.cpp"
       },
       {
+        "name": "setZoneFlag",
+        "params": [
+          "flag: number",
+          "enabled: boolean"
+        ],
+        "return": "boolean|nil",
+        "source": "src/lua/functions/map/tile_functions.cpp"
+      },
+      {
         "name": "sweep",
         "params": [
           "actor: Player"

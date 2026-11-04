@@ -4657,6 +4657,11 @@ function Tile:hasProperty(property, item) end
 ---@return number|nil
 function Tile:queryAdd(thing, flags) end
 
+---@param flag number
+---@param enabled boolean
+---@return boolean|nil
+function Tile:setZoneFlag(flag, enabled) end
+
 ---@param actor Player
 ---@return boolean|nil
 function Tile:sweep(actor) end

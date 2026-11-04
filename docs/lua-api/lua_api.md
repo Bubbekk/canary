@@ -5854,6 +5854,11 @@ C++ Lua binding handlers and registration lines can override inferred signatures
 - Returns: `number|nil`
 - Source: `src/lua/functions/map/tile_functions.cpp`
 
+#### `Tile:setZoneFlag(flag: number, enabled: boolean)`
+
+- Returns: `boolean|nil`
+- Source: `src/lua/functions/map/tile_functions.cpp`
+
 #### `Tile:sweep(actor: Player)`
 
 - Returns: `boolean|nil`
