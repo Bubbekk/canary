@@ -6,16 +6,15 @@
 local Core = BattleRoyaleCore
 local config = Core.config
 
--- Generated arena in an empty map region (checked at startup). Tiles are PvP and no-logout.
+-- Hand-made arena on the map: the area connected to ARENA.start (see buildArena). Tiles are PvP and no-logout.
 local ARENA = {
-	center = Position(35025, 32025, 7),
+	start = Position(1121, 1185, 9),
+	maxSearch = 250, -- tiles from the start point, so a map mistake cannot flood the whole floor
+	center = Position(1121, 1185, 9), -- recalculated from the map area at startup
 	radius = config.arenaRadius,
-	groundCandidates = { 4515, 106, 304, 4526 },
-	obstacleCandidates = { 1112, 1113, 1114, 1294, 1295, 1296 },
-	obstacleCount = 70,
-	lootCount = 55,
+	lootCount = 660,
 	monsters = { "Dragon", "Orc Warlord", "Giant Spider", "Hero", "Warlock", "Dragon Lord" },
-	monsterCount = 10,
+	monsterCount = 100,
 }
 
 local HOLDER_ITEM = 2854 -- backpack that keeps the real equipment in the inbox while playing
@@ -68,11 +67,15 @@ local LOOT_TIERS = {
 
 -- Starting kit per base vocation, besides the backpack
 local KITS = {
-	[1] = { { "wand of inferno", 1, CONST_SLOT_LEFT }, { "great mana potion", 60 }, { "great health potion", 10 } },
-	[2] = { { "underworld rod", 1, CONST_SLOT_LEFT }, { "great mana potion", 60 }, { "great health potion", 10 } },
-	[3] = { { "assassin star", 100, CONST_SLOT_LEFT }, { "great spirit potion", 40 }, { "great health potion", 10 } },
-	[4] = { { "fire sword", 1, CONST_SLOT_LEFT }, { "great health potion", 50 }, { "strong mana potion", 20 } },
-	[9] = { { "great spirit potion", 40 }, { "great health potion", 20 } },
+	-- Sorcerer / druid: mana and offensive runes only (they heal with spells)
+	[1] = { { "wand of inferno", 1, CONST_SLOT_LEFT }, { "great mana potion", 100 }, { "ultimate mana potion", 30 }, { "sudden death rune", 30 } },
+	[2] = { { "underworld rod", 1, CONST_SLOT_LEFT }, { "great mana potion", 100 }, { "ultimate mana potion", 30 }, { "avalanche rune", 30 } },
+	-- Paladin: spirit potions restore both, plus ammunition
+	[3] = { { "assassin star", 100, CONST_SLOT_LEFT }, { "great spirit potion", 60 }, { "ultimate spirit potion", 15 } },
+	-- Knight: health only, no mana
+	[4] = { { "fire sword", 1, CONST_SLOT_LEFT }, { "great health potion", 80 }, { "ultimate health potion", 20 } },
+	-- Monk
+	[9] = { { "great spirit potion", 60 }, { "great health potion", 40 } },
 }
 
 local CLEARED_CONDITIONS = { CONDITION_POISON, CONDITION_FIRE, CONDITION_ENERGY, CONDITION_BLEEDING, CONDITION_PARALYZE, CONDITION_DROWN, CONDITION_FREEZING, CONDITION_DAZZLED, CONDITION_CURSED, CONDITION_INFIGHT, CONDITION_HASTE, CONDITION_INVISIBLE, CONDITION_MANASHIELD }
@@ -130,7 +133,7 @@ local function queueSize()
 end
 
 local function isArenaPosition(position)
-	return position.z == ARENA.center.z and math.abs(position.x - ARENA.center.x) <= ARENA.radius and math.abs(position.y - ARENA.center.y) <= ARENA.radius
+	return position.z == ARENA.center.z and BR.arenaTiles ~= nil and BR.arenaTiles[position.x * 65536 + position.y] == true
 end
 
 -- ---------------------------------------------------------------------------------------------------------
@@ -291,56 +294,74 @@ local function resolveItems()
 	return resolved
 end
 
+-- The arena is the hand-made map area that contains ARENA.start: every tile reachable from it (walls
+-- included) is part of the arena. Its bounding box sets the centre and the radius of the shrinking zone.
 local function buildArena()
-	local ground = pickItem(ARENA.groundCandidates, function(it)
-		return it:isGroundTile()
-	end)
-	local obstacle = pickItem(ARENA.obstacleCandidates, function(it)
-		return it:isBlocking() and not it:isMovable()
-	end)
-	if not ground or not obstacle then
-		logger.error("[BattleRoyale] No valid ground/obstacle item, mode disabled")
+	local start = ARENA.start
+	if not Tile(start) or not Tile(start):getGround() then
+		logger.error("[BattleRoyale] Arena start ({}, {}, {}) has no ground, mode disabled", start.x, start.y, start.z)
 		return false
 	end
 
-	local c, r = ARENA.center, ARENA.radius
-	for x = c.x - r, c.x + r do
-		for y = c.y - r, c.y + r do
-			local existing = Tile(x, y, c.z)
-			if existing and existing:getGround() and existing:getGround():getId() ~= ground then
-				logger.error("[BattleRoyale] Arena region ({}, {}, {}) is not empty, mode disabled", x, y, c.z)
-				return false
+	local tiles, queue, head = {}, { { start.x, start.y } }, 1
+	local minX, maxX, minY, maxY = start.x, start.x, start.y, start.y
+	local count, limit = 0, ARENA.maxSearch
+	tiles[start.x * 65536 + start.y] = true
+	while head <= #queue do
+		local x, y = queue[head][1], queue[head][2]
+		head = head + 1
+		count = count + 1
+		minX, maxX = math.min(minX, x), math.max(maxX, x)
+		minY, maxY = math.min(minY, y), math.max(maxY, y)
+		for _, d in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+			local nx, ny = x + d[1], y + d[2]
+			local key = nx * 65536 + ny
+			if not tiles[key] and math.abs(nx - start.x) <= limit and math.abs(ny - start.y) <= limit then
+				local tile = Tile(nx, ny, start.z)
+				if tile and tile:getGround() then
+					tiles[key] = true
+					queue[#queue + 1] = { nx, ny }
+				end
 			end
 		end
 	end
 
-	for x = c.x - r, c.x + r do
-		for y = c.y - r, c.y + r do
-			local tile = Tile(x, y, c.z) or Game.createTile(x, y, c.z)
-			if not tile:getGround() then
-				tile:addItem(ground, 1)
-			end
-			tile:setZoneFlag(TILESTATE_PVPZONE, true)
-			tile:setZoneFlag(TILESTATE_NOLOGOUT, true)
+	-- Remember what the map put on every tile, so the cleanup between matches never removes decoration
+	local original = {}
+	local open = 0
+	for key in pairs(tiles) do
+		local x, y = math.floor(key / 65536), key % 65536
+		local tile = Tile(x, y, start.z)
+		tile:setZoneFlag(TILESTATE_PVPZONE, true)
+		tile:setZoneFlag(TILESTATE_NOLOGOUT, true)
+		local ids = {}
+		for _, item in ipairs(tile:getItems() or {}) do
+			ids[item:getId()] = (ids[item:getId()] or 0) + 1
 		end
+		original[key] = ids
+		if not tile:hasFlag(TILESTATE_BLOCKSOLID) then
+			open = open + 1
+		end
+	end
+	if open == 0 then
+		logger.error("[BattleRoyale] Arena has no walkable tiles, mode disabled")
+		return false
 	end
 
-	-- Scattered cover; the centre 3x3 stays open
-	local placed = 0
-	local attempts = 0
-	while placed < ARENA.obstacleCount and attempts < ARENA.obstacleCount * 10 do
-		attempts = attempts + 1
-		local position = Position(c.x + math.random(-r + 1, r - 1), c.y + math.random(-r + 1, r - 1), c.z)
-		if math.max(math.abs(position.x - c.x), math.abs(position.y - c.y)) > 1 then
-			local tile = Tile(position)
-			if tile and tile:getItemCount() == 0 then
-				tile:addItem(obstacle, 1)
-				placed = placed + 1
-			end
-		end
+	BR.arenaTiles = tiles
+	BR.arenaOriginal = original
+	ARENA.center = Position(math.floor((minX + maxX) / 2), math.floor((minY + maxY) / 2), start.z)
+	ARENA.radius = math.max(math.ceil((maxX - minX) / 2), math.ceil((maxY - minY) / 2))
+
+	-- The zone phases are tuned for config.arenaRadius: scale them to the real size of the map area
+	local scale = ARENA.radius / config.arenaRadius
+	for _, phase in ipairs(config.phases) do
+		phase.baseRadius = phase.baseRadius or phase.radius
+		phase.radius = math.floor(phase.baseRadius * scale + 0.5)
 	end
-	BR.obstacleId = obstacle
-	logger.info("[BattleRoyale] Arena ready at ({}, {}, {}) ({}x{}, {} obstacles)", c.x, c.y, c.z, r * 2 + 1, r * 2 + 1, placed)
+	config.arenaRadius = ARENA.radius
+
+	logger.info("[BattleRoyale] Arena ready at ({}, {}, {}), radius {}, {} tiles ({} walkable)", ARENA.center.x, ARENA.center.y, ARENA.center.z, ARENA.radius, count, open)
 	return true
 end
 
@@ -351,31 +372,37 @@ end
 
 local function randomArenaPosition(margin)
 	local c, r = ARENA.center, ARENA.radius - (margin or 1)
-	for _ = 1, 60 do
+	-- The map area is not a full square, so many random points fall outside it
+	for _ = 1, 300 do
 		local position = Position(c.x + math.random(-r, r), c.y + math.random(-r, r), c.z)
-		if walkable(position) then
+		if isArenaPosition(position) and walkable(position) then
 			return position
 		end
 	end
 	return nil
 end
 
--- Removes dropped items, corpses, fields and monsters left by the previous match
+-- Removes dropped items, corpses, fields and monsters left by the previous match. Items placed on the
+-- map (walls, decoration) are kept: only what exceeds the startup snapshot of each tile is removed.
 local function cleanArena()
-	local c, r = ARENA.center, ARENA.radius
-	for x = c.x - r, c.x + r do
-		for y = c.y - r, c.y + r do
-			local tile = Tile(x, y, c.z)
-			if tile then
-				for _, creature in ipairs(tile:getCreatures() or {}) do
-					if creature:isMonster() then
-						creature:remove()
-					end
+	for key in pairs(BR.arenaTiles or {}) do
+		local tile = Tile(math.floor(key / 65536), key % 65536, ARENA.center.z)
+		if tile then
+			for _, creature in ipairs(tile:getCreatures() or {}) do
+				if creature:isMonster() then
+					creature:remove()
 				end
-				for _, item in ipairs(tile:getItems() or {}) do
-					if item:getId() ~= BR.obstacleId then
-						item:remove()
-					end
+			end
+			local keep = {}
+			for id, amount in pairs(BR.arenaOriginal[key] or {}) do
+				keep[id] = amount
+			end
+			for _, item in ipairs(tile:getItems() or {}) do
+				local id = item:getId()
+				if (keep[id] or 0) > 0 then
+					keep[id] = keep[id] - 1
+				else
+					item:remove()
 				end
 			end
 		end
@@ -406,6 +433,7 @@ end
 -- ---------------------------------------------------------------------------------------------------------
 -- Character snapshot and restore
 -- ---------------------------------------------------------------------------------------------------------
+-- Equipment slots only: CONST_SLOT_LAST also covers the store inbox, which must never be stashed or cleared
 local SKILLS = { SKILL_FIST, SKILL_CLUB, SKILL_SWORD, SKILL_AXE, SKILL_DISTANCE, SKILL_SHIELD }
 
 local function snapshotKv(player)
@@ -440,7 +468,7 @@ local function stashEquipment(player)
 		holder:remove()
 		return false
 	end
-	for slot = CONST_SLOT_FIRST, CONST_SLOT_LAST do
+	for slot = CONST_SLOT_FIRST, CONST_SLOT_AMMO do
 		local item = player:getSlotItem(slot)
 		if item then
 			item:setCustomAttribute(SLOT_ATTR, slot)
@@ -451,7 +479,7 @@ local function stashEquipment(player)
 end
 
 local function clearEquipment(player)
-	for slot = CONST_SLOT_FIRST, CONST_SLOT_LAST do
+	for slot = CONST_SLOT_FIRST, CONST_SLOT_AMMO do
 		local item = player:getSlotItem(slot)
 		if item then
 			item:remove()
@@ -545,6 +573,7 @@ function BR.restore(player)
 	player:setSkull(SKULL_NONE)
 	player:setSkullTime(0)
 	player:unregisterEvent("BattleRoyaleHealth")
+	player:setSkillLoss(true)
 	player:teleportTo(Position(math.floor(snapshot.x), math.floor(snapshot.y), math.floor(snapshot.z)))
 	player:getPosition():sendMagicEffect(CONST_ME_TELEPORT)
 	kv:remove("snapshot")
@@ -592,6 +621,11 @@ local function aliveCount()
 	return count
 end
 
+-- A solo practice match (/brsolo) only ends when its single player is eliminated.
+local function lastStanding()
+	return BR.match and BR.match.solo and 0 or 1
+end
+
 local finishMatch
 
 function BR.eliminate(player, killer)
@@ -622,7 +656,7 @@ function BR.eliminate(player, killer)
 	broadcastMatch(killerName and string.format("%s fue eliminado por %s. Quedan %d.", player:getName(), killerName, aliveCount())
 		or string.format("%s fue eliminado. Quedan %d.", player:getName(), aliveCount()), MESSAGE_STATUS)
 
-	if aliveCount() <= 1 then
+	if aliveCount() <= lastStanding() then
 		finishMatch()
 	end
 end
@@ -645,9 +679,23 @@ finishMatch = function()
 			local player = Player(guid)
 			if player then
 				BR.restore(player)
-				say(player, string.format("\161Ganaste el Battle Royale con %d kills!", entry.kills))
+				if not match.solo then
+					say(player, string.format("\161Ganaste el Battle Royale con %d kills!", entry.kills))
+				end
 			end
 		end
+	end
+
+	if match.solo then
+		-- Practice match: no ratings and no match history
+		logger.info("[BattleRoyale] Solo practice match ended")
+		BR.match = nil
+		cleanArena()
+		BR.state = "idle"
+		if queueSize() >= config.minPlayers then
+			BR.startCountdown()
+		end
+		return
 	end
 
 	local season = currentSeason()
@@ -750,7 +798,7 @@ local function zoneTick()
 		end
 	end
 
-	if BR.match and aliveCount() <= 1 then
+	if BR.match and aliveCount() <= lastStanding() then
 		finishMatch()
 		return
 	end
@@ -759,19 +807,25 @@ local function zoneTick()
 	end
 end
 
-local function startMatch()
-	if BR.state ~= "countdown" then
+-- soloPlayer starts a practice match (/brsolo) for that player only, bypassing the queue and the minimum.
+local function startMatch(soloPlayer)
+	if not soloPlayer and BR.state ~= "countdown" then
 		return
 	end
 	local entrants = {}
-	for guid in pairs(BR.queue) do
-		local player = Player(guid)
-		if player and not player:isPzLocked() and not snapshotKv(player):get("snapshot") then
-			entrants[#entrants + 1] = player
+	if soloPlayer then
+		entrants[1] = soloPlayer
+	else
+		for guid in pairs(BR.queue) do
+			local player = Player(guid)
+			if player and not player:isPzLocked() and not snapshotKv(player):get("snapshot") then
+				entrants[#entrants + 1] = player
+			end
 		end
+		BR.queue = {}
 	end
-	BR.queue = {}
-	if #entrants < config.minPlayers then
+	local minimum = soloPlayer and 1 or config.minPlayers
+	if #entrants < minimum then
 		BR.state = "idle"
 		for _, player in ipairs(entrants) do
 			BR.queue[player:getGuid()] = player:getIp()
@@ -783,7 +837,7 @@ local function startMatch()
 	cleanArena()
 	local spawned = spawnLoot()
 	local season = currentSeason()
-	BR.match = { players = {}, size = #entrants, startedAt = os.time(), announcedShrink = {}, season = season }
+	BR.match = { players = {}, size = #entrants, startedAt = os.time(), announcedShrink = {}, season = season, solo = soloPlayer ~= nil }
 	BR.state = "running"
 
 	for _, player in ipairs(entrants) do
@@ -793,11 +847,14 @@ local function startMatch()
 			player:save()
 			equalize(player)
 			player:registerEvent("BattleRoyaleHealth")
+			-- A death in the arena must never cost the real character level or skills
+			player:setSkillLoss(false)
 			player:teleportTo(spawn)
 			spawn:sendMagicEffect(CONST_ME_TELEPORT)
 			BR.match.players[player:getGuid()] = { alive = true, kills = 0, rating = BR.getRating(player:getGuid(), season).rating, lastCombat = os.time() }
 			say(player, string.format("\161Comienza la partida! %d jugadores. Tienes %d segundos de gracia: busca equipo en el suelo.", #entrants, config.graceTime))
 		else
+			logger.warn("[BattleRoyale] Could not prepare {}: {}", player:getName(), spawn and "equipment could not be stored in the inbox" or "no free arena tile")
 			say(player, "No se pudo preparar tu personaje; intenta de nuevo.")
 		end
 	end
@@ -807,7 +864,7 @@ local function startMatch()
 	end
 	BR.match.size = count
 	logger.info("[BattleRoyale] Match started with {} players, {} loot items", count, spawned)
-	if count < config.minPlayers then
+	if count < minimum then
 		finishMatch()
 		return
 	end
@@ -939,6 +996,7 @@ function login.onLogin(player)
 		say(player, "Tu personaje fue restaurado tras la partida.")
 	elseif entry and entry.alive then
 		player:registerEvent("BattleRoyaleHealth")
+		player:setSkillLoss(false)
 	end
 	if BR.tableReady then
 		claimRewards(player)
@@ -1021,6 +1079,38 @@ command:separator(" ")
 command:groupType("normal")
 command:register()
 
+-- /brsolo (GOD only): practice match alone in the arena (monsters, loot and shrinking zone, no ratings).
+-- "/brsolo stop" ends it. Lets one person test the whole match flow without a second player.
+local solo = TalkAction("/brsolo")
+function solo.onSay(player, words, param)
+	param = (param or ""):lower():trim()
+	if param == "stop" then
+		if BR.match and BR.match.solo and BR.match.players[player:getGuid()] then
+			BR.eliminate(player, nil)
+		else
+			say(player, "No est\225s en una pr\225ctica en solitario.")
+		end
+		return true
+	end
+	if BR.state ~= "idle" then
+		say(player, "Hay una cola o una partida activa; espera a que termine.")
+		return true
+	end
+	if BR.queue[player:getGuid()] or snapshotKv(player):get("snapshot") then
+		say(player, "Sal de la cola (!br salir) o termina tu partida antes de practicar.")
+		return true
+	end
+	if player:isPzLocked() or player:getCondition(CONDITION_INFIGHT) then
+		say(player, "No puedes entrar en combate.")
+		return true
+	end
+	startMatch(player)
+	return true
+end
+solo:separator(" ")
+solo:groupType("god")
+solo:register()
+
 -- /brtest (GOD only): snapshot -> equalize -> restore on the caller and compare every saved value.
 -- Verifies the riskiest part of the mode without needing a full match.
 local selfTest = TalkAction("/brtest")
@@ -1038,7 +1128,7 @@ function selfTest.onSay(player, words, param)
 		for _, skill in ipairs(SKILLS) do
 			values["skill" .. skill] = player:getSkillLevel(skill) .. "/" .. player:getSkillTries(skill)
 		end
-		for slot = CONST_SLOT_FIRST, CONST_SLOT_LAST do
+		for slot = CONST_SLOT_FIRST, CONST_SLOT_AMMO do
 			local item = player:getSlotItem(slot)
 			values["slot" .. slot] = item and item:getId() or 0
 		end

@@ -9,24 +9,25 @@ Core.config = {
 	maxPlayers = 30,
 	minLevel = 100, -- level in the normal game required to queue
 	lobbyCountdown = 60, -- seconds between reaching minPlayers and the start
-	graceTime = 20, -- seconds without damage after spawning
+	graceTime = 30, -- seconds without damage after spawning
 	matchLevel = 200, -- every participant plays at this level
 	startRating = 1000,
 	ratingFloor = 0,
 	kFactor = 32,
 	killBonus = 4, -- rating points per kill, added after the placement change
 	maxKillBonus = 20,
-	idleWarning = 90, -- seconds without dealing or taking damage
-	idleLimit = 120, -- eliminated after this many idle seconds
+	idleWarning = 150, -- seconds without dealing or taking damage
+	idleLimit = 210, -- eliminated after this many idle seconds
 	minMatchesForReward = 5,
 	-- Safe zone (square, Chebyshev distance from the centre) shrinks in phases
-	arenaRadius = 25,
+	arenaRadius = 87,
 	phases = {
-		{ wait = 60, shrink = 30, radius = 18, damage = 0.03 },
-		{ wait = 45, shrink = 30, radius = 11, damage = 0.05 },
-		{ wait = 40, shrink = 25, radius = 6, damage = 0.08 },
-		{ wait = 30, shrink = 20, radius = 2, damage = 0.12 },
-		{ wait = 20, shrink = 15, radius = 0, damage = 0.20 },
+		{ wait = 120, shrink = 80, radius = 66, damage = 0.03 },
+		{ wait = 100, shrink = 80, radius = 45, damage = 0.05 },
+		{ wait = 90, shrink = 70, radius = 28, damage = 0.08 },
+		{ wait = 70, shrink = 55, radius = 14, damage = 0.12 },
+		{ wait = 50, shrink = 40, radius = 5, damage = 0.18 },
+		{ wait = 40, shrink = 30, radius = 0, damage = 0.25 },
 	},
 }
 
