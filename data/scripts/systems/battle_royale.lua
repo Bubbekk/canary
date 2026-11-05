@@ -647,6 +647,9 @@ function BR.restore(player)
 	end
 	player:setMaxHealth(math.floor(snapshot.maxHealth))
 	player:setMaxMana(math.floor(snapshot.maxMana))
+	if snapshot.capacity then
+		player:setCapacity(math.floor(snapshot.capacity))
+	end
 	player:addHealth(math.floor(snapshot.health) - player:getHealth())
 	player:addMana(math.floor(snapshot.mana) - player:getMana())
 
@@ -668,7 +671,20 @@ local function equalize(player)
 	local stats = Core.combatStats(baseId)
 	local maxHealth, maxMana = Core.statsForLevel(config.matchLevel, vocation:getHealthGain(), vocation:getManaGain())
 
+	-- setLevel does not touch capacity: keep the real one (from the save done on entry) in the snapshot and
+	-- give the capacity of the match level, otherwise low characters cannot carry the kit or the loot
+	local kv = snapshotKv(player)
+	local snapshot = kv:get("snapshot")
+	if snapshot and not snapshot.capacity then
+		local result = db.storeQuery("SELECT `cap` FROM `players` WHERE `id` = " .. player:getGuid())
+		if result then
+			snapshot.capacity = Result.getNumber(result, "cap") * 100
+			Result.free(result)
+			kv:set("snapshot", snapshot)
+		end
+	end
 	player:setLevel(config.matchLevel)
+	player:setCapacity(40000 + (config.matchLevel - 8) * vocation:getCapacityGain())
 	player:setMagicLevel(stats.magic)
 	for skill, level in pairs(stats.skills) do
 		player:setSkillLevel(skill, level)
