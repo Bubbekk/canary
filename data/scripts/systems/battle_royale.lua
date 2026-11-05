@@ -521,18 +521,21 @@ local function snapshotKv(player)
 	return player:kv():scoped(KV_SCOPE)
 end
 
-local function findHolder(player)
+-- Every holder backpack of this player in the inbox. Containers insert at index 0, so index 0 is the newest.
+-- A stale holder (empty or from an interrupted match) must never hide the one that has the equipment.
+local function findHolders(player)
+	local holders = {}
 	local inbox = player:getInbox()
 	if not inbox then
-		return nil
+		return holders
 	end
-	for index = inbox:getSize() - 1, 0, -1 do
+	for index = 0, inbox:getSize() - 1 do
 		local item = inbox:getItem(index)
 		if item and item:getCustomAttribute(HOLDER_ATTR) then
-			return item
+			holders[#holders + 1] = item
 		end
 	end
-	return nil
+	return holders
 end
 
 local function stashEquipment(player)
@@ -568,31 +571,29 @@ local function clearEquipment(player)
 	end
 end
 
+-- Gives back the equipment from every holder: each item goes to its slot when free, otherwise to the inbox
+-- (outside the holder), so nothing stays hidden inside a holder backpack.
 local function restoreEquipment(player)
-	local holder = findHolder(player)
-	if not holder then
-		return
-	end
-	local items = {}
-	for index = holder:getSize() - 1, 0, -1 do
-		items[#items + 1] = holder:getItem(index)
-	end
-	for _, item in ipairs(items) do
-		local slot = tonumber(item:getCustomAttribute(SLOT_ATTR))
-		item:removeCustomAttribute(SLOT_ATTR)
-		if slot and not player:getSlotItem(slot) then
-			item:moveToSlot(player, slot)
-		end
-	end
-	-- Anything that could not be equipped stays in the inbox, outside the holder
 	local inbox = player:getInbox()
-	for index = holder:getSize() - 1, 0, -1 do
-		local item = holder:getItem(index)
-		if item and inbox then
-			item:moveTo(inbox)
+	for _, holder in ipairs(findHolders(player)) do
+		local items = {}
+		for index = holder:getSize() - 1, 0, -1 do
+			items[#items + 1] = holder:getItem(index)
+		end
+		for _, item in ipairs(items) do
+			local slot = tonumber(item:getCustomAttribute(SLOT_ATTR))
+			item:removeCustomAttribute(SLOT_ATTR)
+			if not (slot and not player:getSlotItem(slot) and item:moveToSlot(player, slot)) and inbox then
+				item:moveTo(inbox)
+			end
+		end
+		if holder:getSize() == 0 then
+			holder:remove()
+		else
+			logger.warn("[BattleRoyale] {}: {} items could not leave the holder, kept in the inbox", player:getName(), holder:getSize())
+			holder:removeCustomAttribute(HOLDER_ATTR)
 		end
 	end
-	holder:remove()
 end
 
 local function takeSnapshot(player)
@@ -1097,6 +1098,10 @@ function login.onLogin(player)
 	elseif entry and entry.alive then
 		player:registerEvent("BattleRoyaleHealth")
 		player:setSkillLoss(false)
+	elseif #findHolders(player) > 0 then
+		-- Equipment left in a holder by an earlier bug or an interrupted match
+		restoreEquipment(player)
+		say(player, "Tu equipo guardado del Battle Royale fue devuelto a tus ranuras o a tu buz\243n.")
 	end
 	if BR.tableReady then
 		claimRewards(player)
