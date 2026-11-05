@@ -13,6 +13,8 @@ local ARENA = {
 	center = Position(1121, 1185, 9), -- recalculated from the map area at startup
 	radius = config.arenaRadius,
 	lootCount = 660,
+	chestItems = { 2, 4 }, -- random items per map chest, refilled every match
+	spawnDistance = 25, -- preferred tiles between players when they are dropped in
 	monsters = { "Dragon", "Orc Warlord", "Giant Spider", "Hero", "Warlock", "Dragon Lord" },
 	monsterCount = 100,
 }
@@ -35,6 +37,13 @@ local LOOT_TIERS = {
 			{ "strong mana potion", 15 },
 			{ "great fireball rune", 15 },
 			{ "intense healing rune", 5 },
+			{ "spike sword", 1 },
+			{ "knight axe", 1 },
+			{ "dragon hammer", 1 },
+			{ "wand of cosmic energy", 1 },
+			{ "moonlight rod", 1 },
+			{ "crossbow", 1 },
+			{ "power bolt", 40 },
 		},
 	},
 	{
@@ -49,6 +58,13 @@ local LOOT_TIERS = {
 			{ "sudden death rune", 10 },
 			{ "ultimate healing rune", 5 },
 			{ "avalanche rune", 15 },
+			{ "magic longsword", 1 },
+			{ "dragon slayer", 1 },
+			{ "war hammer", 1 },
+			{ "wand of inferno", 1 },
+			{ "underworld rod", 1 },
+			{ "royal spear", 40 },
+			{ "energy bomb rune", 5 },
 		},
 	},
 	{
@@ -61,6 +77,9 @@ local LOOT_TIERS = {
 			{ "royal helmet", 1 },
 			{ "ultimate health potion", 10 },
 			{ "great spirit potion", 15 },
+			{ "supreme health potion", 10 },
+			{ "ultimate mana potion", 20 },
+			{ "magic wall rune", 5 },
 		},
 	},
 }
@@ -328,6 +347,7 @@ local function buildArena()
 
 	-- Remember what the map put on every tile, so the cleanup between matches never removes decoration
 	local original = {}
+	local chests = {}
 	local open = 0
 	for key in pairs(tiles) do
 		local x, y = math.floor(key / 65536), key % 65536
@@ -337,6 +357,9 @@ local function buildArena()
 		local ids = {}
 		for _, item in ipairs(tile:getItems() or {}) do
 			ids[item:getId()] = (ids[item:getId()] or 0) + 1
+			if item:isContainer() then
+				chests[#chests + 1] = { x = x, y = y, id = item:getId() }
+			end
 		end
 		original[key] = ids
 		if not tile:hasFlag(TILESTATE_BLOCKSOLID) then
@@ -350,6 +373,7 @@ local function buildArena()
 
 	BR.arenaTiles = tiles
 	BR.arenaOriginal = original
+	BR.arenaChests = chests
 	ARENA.center = Position(math.floor((minX + maxX) / 2), math.floor((minY + maxY) / 2), start.z)
 	ARENA.radius = math.max(math.ceil((maxX - minX) / 2), math.ceil((maxY - minY) / 2))
 
@@ -361,7 +385,7 @@ local function buildArena()
 	end
 	config.arenaRadius = ARENA.radius
 
-	logger.info("[BattleRoyale] Arena ready at ({}, {}, {}), radius {}, {} tiles ({} walkable)", ARENA.center.x, ARENA.center.y, ARENA.center.z, ARENA.radius, count, open)
+	logger.info("[BattleRoyale] Arena ready at ({}, {}, {}), radius {}, {} tiles ({} walkable), {} chests", ARENA.center.x, ARENA.center.y, ARENA.center.z, ARENA.radius, count, open, #chests)
 	return true
 end
 
@@ -380,6 +404,30 @@ local function randomArenaPosition(margin)
 		end
 	end
 	return nil
+end
+
+-- Random drop point that keeps players apart: tries for ARENA.spawnDistance tiles from everyone already
+-- placed, and relaxes the distance if the map is too crowded.
+local function spreadSpawnPosition(taken)
+	for distance = ARENA.spawnDistance, 0, -5 do
+		for _ = 1, 40 do
+			local position = randomArenaPosition(4)
+			if not position then
+				break
+			end
+			local free = true
+			for _, other in ipairs(taken) do
+				if math.max(math.abs(other.x - position.x), math.abs(other.y - position.y)) < distance then
+					free = false
+					break
+				end
+			end
+			if free then
+				return position
+			end
+		end
+	end
+	return randomArenaPosition(4)
 end
 
 -- Removes dropped items, corpses, fields and monsters left by the previous match. Items placed on the
@@ -407,6 +455,39 @@ local function cleanArena()
 			end
 		end
 	end
+end
+
+-- Every match empties the map chests and fills them with fresh random loot, so the same items are never
+-- in the same place twice. A chest never holds two copies of the same item.
+local function refillChests()
+	local filled = 0
+	for _, chest in ipairs(BR.arenaChests or {}) do
+		local tile = Tile(chest.x, chest.y, ARENA.center.z)
+		local container = tile and tile:getItemById(chest.id)
+		container = container and Container(container:getUniqueId())
+		if container then
+			while container:getSize() > 0 do
+				local item = container:getItem(0)
+				if not item or not item:remove() then
+					break
+				end
+			end
+			local used = {}
+			local wanted = math.random(ARENA.chestItems[1], ARENA.chestItems[2])
+			for _ = 1, wanted * 3 do
+				if container:getSize() >= wanted then
+					break
+				end
+				local entry = Core.rollLoot(BR.resolved.loot)
+				if entry and not used[entry[1]] then
+					used[entry[1]] = true
+					container:addItem(entry[1], entry[2])
+				end
+			end
+			filled = filled + 1
+		end
+	end
+	return filled
 end
 
 local function spawnLoot()
@@ -835,13 +916,16 @@ local function startMatch(soloPlayer)
 	end
 
 	cleanArena()
+	local chests = refillChests()
 	local spawned = spawnLoot()
 	local season = currentSeason()
 	BR.match = { players = {}, size = #entrants, startedAt = os.time(), announcedShrink = {}, season = season, solo = soloPlayer ~= nil }
 	BR.state = "running"
 
+	local taken = {}
 	for _, player in ipairs(entrants) do
-		local spawn = randomArenaPosition(4)
+		local spawn = spreadSpawnPosition(taken)
+		taken[#taken + 1] = spawn
 		if spawn and stashEquipment(player) then
 			takeSnapshot(player)
 			player:save()
@@ -863,7 +947,7 @@ local function startMatch(soloPlayer)
 		count = count + 1
 	end
 	BR.match.size = count
-	logger.info("[BattleRoyale] Match started with {} players, {} loot items", count, spawned)
+	logger.info("[BattleRoyale] Match started with {} players, {} loot items, {} chests filled", count, spawned, chests)
 	if count < minimum then
 		finishMatch()
 		return
