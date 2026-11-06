@@ -12,8 +12,8 @@ local ARENA = {
 	maxSearch = 250, -- tiles from the start point, so a map mistake cannot flood the whole floor
 	center = Position(1121, 1185, 9), -- recalculated from the map area at startup
 	radius = config.arenaRadius,
-	lootCount = 660,
-	chestItems = { 2, 4 }, -- random items per map chest, refilled every match
+	lootCount = 1500,
+	chestItems = { 5, 8 }, -- random items per map chest, refilled every match
 	spawnDistance = 25, -- preferred tiles between players when they are dropped in
 	monsters = { "Dragon", "Orc Warlord", "Giant Spider", "Hero", "Warlock", "Dragon Lord" },
 	monsterCount = 100,
@@ -33,17 +33,17 @@ local LOOT_TIERS = {
 			{ "plate legs", 1 },
 			{ "steel helmet", 1 },
 			{ "dwarven shield", 1 },
-			{ "strong health potion", 10 },
-			{ "strong mana potion", 15 },
-			{ "great fireball rune", 15 },
-			{ "intense healing rune", 5 },
+			{ "strong health potion", 100 },
+			{ "strong mana potion", 100 },
+			{ "great fireball rune", 100 },
+			{ "intense healing rune", 100 },
 			{ "spike sword", 1 },
 			{ "knight axe", 1 },
 			{ "dragon hammer", 1 },
 			{ "wand of cosmic energy", 1 },
 			{ "moonlight rod", 1 },
 			{ "crossbow", 1 },
-			{ "power bolt", 40 },
+			{ "power bolt", 100 },
 		},
 	},
 	{
@@ -53,18 +53,18 @@ local LOOT_TIERS = {
 			{ "crown legs", 1 },
 			{ "crown helmet", 1 },
 			{ "crown shield", 1 },
-			{ "great health potion", 15 },
-			{ "great mana potion", 20 },
-			{ "sudden death rune", 10 },
-			{ "ultimate healing rune", 5 },
-			{ "avalanche rune", 15 },
+			{ "great health potion", 100 },
+			{ "great mana potion", 100 },
+			{ "sudden death rune", 100 },
+			{ "ultimate healing rune", 100 },
+			{ "avalanche rune", 100 },
 			{ "magic longsword", 1 },
 			{ "dragon slayer", 1 },
 			{ "war hammer", 1 },
 			{ "wand of inferno", 1 },
 			{ "underworld rod", 1 },
-			{ "royal spear", 40 },
-			{ "energy bomb rune", 5 },
+			{ "royal spear", 100 },
+			{ "energy bomb rune", 100 },
 		},
 	},
 	{
@@ -75,27 +75,41 @@ local LOOT_TIERS = {
 			{ "demon shield", 1 },
 			{ "boots of haste", 1 },
 			{ "royal helmet", 1 },
-			{ "ultimate health potion", 10 },
-			{ "great spirit potion", 15 },
-			{ "supreme health potion", 10 },
-			{ "ultimate mana potion", 20 },
-			{ "magic wall rune", 5 },
+			{ "ultimate health potion", 100 },
+			{ "great spirit potion", 100 },
+			{ "supreme health potion", 100 },
+			{ "ultimate mana potion", 100 },
+			{ "magic wall rune", 50 },
 		},
 	},
 }
 
 -- Starting kit per base vocation, besides the backpack
+-- Tools every participant gets (expanded below into each kit)
+local TOOLS = "TOOLS"
+local TOOL_ITEMS = { { "rope", 1 }, { "shovel", 1 }, { "machete", 1 }, { "pick", 1 } }
 local KITS = {
-	-- Sorcerer / druid: mana and offensive runes only (they heal with spells)
-	[1] = { { "wand of inferno", 1, CONST_SLOT_LEFT }, { "great mana potion", 100 }, { "ultimate mana potion", 30 }, { "sudden death rune", 30 } },
-	[2] = { { "underworld rod", 1, CONST_SLOT_LEFT }, { "great mana potion", 100 }, { "ultimate mana potion", 30 }, { "avalanche rune", 30 } },
-	-- Paladin: spirit potions restore both, plus ammunition
-	[3] = { { "assassin star", 100, CONST_SLOT_LEFT }, { "great spirit potion", 60 }, { "ultimate spirit potion", 15 } },
-	-- Knight: health only, no mana
-	[4] = { { "fire sword", 1, CONST_SLOT_LEFT }, { "great health potion", 80 }, { "ultimate health potion", 20 } },
+	-- Sorcerer
+	[1] = { { "wand of inferno", 1, CONST_SLOT_LEFT }, { "great mana potion", 100 }, { "ultimate mana potion", 100 }, { "sudden death rune", 100 }, { "great fireball rune", 100 }, { "ultimate healing rune", 100 }, { "magic wall rune", 50 }, { "energy bomb rune", 50 }, TOOLS },
+	-- Druid
+	[2] = { { "underworld rod", 1, CONST_SLOT_LEFT }, { "great mana potion", 100 }, { "ultimate mana potion", 100 }, { "avalanche rune", 100 }, { "sudden death rune", 100 }, { "ultimate healing rune", 100 }, { "magic wall rune", 50 }, { "energy bomb rune", 50 }, TOOLS },
+	-- Paladin
+	[3] = { { "assassin star", 100, CONST_SLOT_LEFT }, { "royal spear", 100 }, { "great spirit potion", 100 }, { "ultimate spirit potion", 100 }, { "great health potion", 100 }, { "sudden death rune", 100 }, { "ultimate healing rune", 100 }, TOOLS },
+	-- Knight
+	[4] = { { "fire sword", 1, CONST_SLOT_LEFT }, { "great health potion", 100 }, { "ultimate health potion", 100 }, { "supreme health potion", 100 }, { "great fireball rune", 100 }, { "ultimate healing rune", 100 }, TOOLS },
 	-- Monk
-	[9] = { { "great spirit potion", 60 }, { "great health potion", 40 } },
+	[9] = { { "great spirit potion", 100 }, { "ultimate spirit potion", 100 }, { "great health potion", 100 }, { "ultimate healing rune", 100 }, TOOLS },
 }
+for _, kit in pairs(KITS) do
+	for index = #kit, 1, -1 do
+		if kit[index] == TOOLS then
+			table.remove(kit, index)
+			for _, tool in ipairs(TOOL_ITEMS) do
+				kit[#kit + 1] = tool
+			end
+		end
+	end
+end
 
 local CLEARED_CONDITIONS = { CONDITION_POISON, CONDITION_FIRE, CONDITION_ENERGY, CONDITION_BLEEDING, CONDITION_PARALYZE, CONDITION_DROWN, CONDITION_FREEZING, CONDITION_DAZZLED, CONDITION_CURSED, CONDITION_INFIGHT, CONDITION_HASTE, CONDITION_INVISIBLE, CONDITION_MANASHIELD }
 
