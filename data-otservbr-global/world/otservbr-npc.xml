@@ -2337,6 +2337,9 @@
 	<npc centerx="33153" centery="32984" centerz="8" radius="1">
 		<npc name="Brutus" x="0" y="0" z="8" spawntime="60" />
 	</npc>
+	<npc centerx="1182" centery="1174" centerz="9" radius="1">
+		<npc name="Gate Guardian" x="0" y="0" z="9" spawntime="60" />
+	</npc>
 	<npc centerx="33221" centery="31049" centerz="9" radius="1">
 		<npc name="Rebel" x="0" y="0" z="9" spawntime="60" />
 	</npc>
