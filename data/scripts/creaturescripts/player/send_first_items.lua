@@ -125,6 +125,8 @@ function sendFirstItems.onLogin(player)
 			backpack:addItem(targetVocation.container[i][1], targetVocation.container[i][2])
 		end
 	end
+	-- Starter money: 500 gold as 5 platinum coins.
+	backpack:addItem(3035, 5)
 	return true
 end
 
