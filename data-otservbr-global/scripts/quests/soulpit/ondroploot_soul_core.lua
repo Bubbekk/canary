@@ -24,7 +24,7 @@ function callback.monsterOnDropLoot(monster, corpse)
 			soulCoreId = getItemIdByName(string.format("%s soul core", monster:getName():lower()))
 		end
 
-		if not soulCoreId and not trySameMonsterSoulCore then
+		if not soulCoreId then -- also when the monster has no soul core of its own
 			local race = mType:Bestiaryrace()
 			local monstersInCategory = Game.getMonstersByRace(race)
 
