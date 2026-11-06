@@ -1,7 +1,15 @@
 local config = {
 	enableSpawn = true,
-	spawnChance = 33,
+	spawnChance = 100,
 	towns = {
+		-- RoT: Yasir stays in Thais every day (no world-change map needed).
+		[1] = {
+			yasirPosition = Position(32349, 32231, 7),
+			mapName = "Thais",
+			noMap = true,
+		},
+	},
+	unusedTowns = {
 		[1] = {
 			removeItems = {
 				{ position = Position(33096, 32882, 6), itemId = 4977 },
@@ -58,8 +66,10 @@ function orientalTrader.onStartup()
 			end
 		end
 
-		local mapName = string.removeAllSpaces(randTown.mapName):lower()
-		Game.loadMap(DATA_DIRECTORY .. "/world/world_changes/oriental_trader/" .. mapName .. ".otbm")
+		if not randTown.noMap then
+			local mapName = string.removeAllSpaces(randTown.mapName):lower()
+			Game.loadMap(DATA_DIRECTORY .. "/world/world_changes/oriental_trader/" .. mapName .. ".otbm")
+		end
 
 		message = string.format("[World Change] Yasir has arrived in %s today!", randTown.mapName)
 		addEvent(spawnYasir, 60000, randTown.yasirPosition)
