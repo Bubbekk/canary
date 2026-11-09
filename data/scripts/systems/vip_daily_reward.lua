@@ -21,18 +21,17 @@ local SHRINE_MAX_DISTANCE = 3
 
 -- Las opciones (choices) deben coincidir en orden con las del cliente.
 local REWARDS = {
-	[1] = { type = "items", choices = { { 236, 25 }, { 237, 25 } } }, -- strong health / strong mana potion
-	[2] = { type = "prey", amount = 2 },
-	[3] = { type = "exercise" },
-	[4] = { type = "xpboost", minutes = 30 },
+	[1] = { type = "xpboost", minutes = 30 },
+	[2] = { type = "exercise", charges = 500 },
+	[3] = { type = "items", choices = { { 236, 25 }, { 237, 25 } } }, -- strong health / strong mana potion
+	[4] = { type = "prey", amount = 2 },
 	[5] = { type = "tokens", amount = 1 },
-	[6] = { type = "exercise" },
+	[6] = { type = "exercise", charges = 1000 },
 	[7] = { type = "chest", minutes = 60, slivers = 10, coins = 5, tokens = 1 },
 }
 
--- Armas de entrenamiento normales (500 cargas)
+-- Armas de entrenamiento normales; las cargas las fija cada día (`charges`)
 local EXERCISE_WEAPONS = { 28552, 28553, 28554, 28555, 28556, 28557 } -- sword, axe, club, bow, rod, wand
-local EXERCISE_CHARGES = 500
 local SLIVER_ITEM_ID = 37109
 
 local shrineVisits = {} -- [playerId] = { time = os.time(), pos = Position }
@@ -136,10 +135,10 @@ local function deliver(player, reward, choice)
 		return string.format("%dx %s", entry[2], ItemType(entry[1]):getName())
 	elseif reward.type == "exercise" then
 		local itemId = EXERCISE_WEAPONS[choice]
-		if not deliverItems(player, { { itemId, EXERCISE_CHARGES } }) then
+		if not deliverItems(player, { { itemId, reward.charges } }) then
 			return nil
 		end
-		return string.format("%s (%d cargas)", ItemType(itemId):getName(), EXERCISE_CHARGES)
+		return string.format("%s (%d cargas)", ItemType(itemId):getName(), reward.charges)
 	elseif reward.type == "prey" then
 		player:addPreyCards(reward.amount)
 		return string.format("%dx comod\237n de presa", reward.amount)
