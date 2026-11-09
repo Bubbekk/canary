@@ -388,8 +388,10 @@ local function buildArena()
 	BR.arenaTiles = tiles
 	BR.arenaOriginal = original
 	BR.arenaChests = chests
+	BR.arenaZ = start.z
 	ARENA.center = Position(math.floor((minX + maxX) / 2), math.floor((minY + maxY) / 2), start.z)
 	ARENA.radius = math.max(math.ceil((maxX - minX) / 2), math.ceil((maxY - minY) / 2))
+	BR.arenaCenter = ARENA.center -- shared with the Zombie Event
 
 	-- The zone phases are tuned for config.arenaRadius: scale them to the real size of the map area
 	local scale = ARENA.radius / config.arenaRadius
@@ -470,6 +472,8 @@ local function cleanArena()
 		end
 	end
 end
+
+BR.cleanArena = cleanArena -- shared with the Zombie Event, which uses the same arena
 
 -- Every match empties the map chests and fills them with fresh random loot, so the same items are never
 -- in the same place twice. A chest never holds two copies of the same item.
@@ -1007,6 +1011,11 @@ end
 
 function BR.startCountdown()
 	if BR.state ~= "idle" then
+		return
+	end
+	if ZombieEvent and ZombieEvent.state ~= "idle" then
+		broadcastQueue("El Zombie Event est\225 usando la arena. La partida empezar\225 cuando termine.")
+		addEvent(BR.startCountdown, 30 * 1000)
 		return
 	end
 	BR.state = "countdown"
