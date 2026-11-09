@@ -71,6 +71,14 @@ local function isAtShrine(player)
 	return pos.z == visit.pos.z and math.abs(pos.x - visit.pos.x) <= SHRINE_MAX_DISTANCE and math.abs(pos.y - visit.pos.y) <= SHRINE_MAX_DISTANCE
 end
 
+-- Los textos van en Latin-1 para el cliente; la base de datos es utf8mb4, así que el historial se convierte.
+local function latin1ToUtf8(text)
+	return (text:gsub("[\128-\255]", function(c)
+		local byte = c:byte()
+		return string.char(0xC0 + math.floor(byte / 64), 0x80 + byte % 64)
+	end))
+end
+
 local function sendMessage(player, text)
 	player:sendExtendedOpcode(OPCODE, "M|" .. text)
 end
@@ -98,7 +106,8 @@ local function deliverItems(player, list)
 	end
 	local added = {}
 	for _, entry in ipairs(list) do
-		local item = inbox:addItem(entry[1], entry[2])
+		-- FLAG_NOLIMIT: el buzón de la Tienda no debe rechazar por peso (igual que las compras de la Tienda)
+		local item = inbox:addItem(entry[1], entry[2], INDEX_WHEREEVER, FLAG_NOLIMIT)
 		if not item then
 			for _, done in ipairs(added) do
 				done:remove()
@@ -205,7 +214,7 @@ local function claim(player, choice)
 		return sendMessage(player, "No tienes espacio suficiente en tu buz\243n de la Tienda.")
 	end
 
-	DailyReward.insertHistory(player:getGuid(), player:getDayStreak(), string.format("Recompensa VIP d\237a %d: %s.", dayIndex, description))
+	DailyReward.insertHistory(player:getGuid(), player:getDayStreak(), latin1ToUtf8(string.format("Recompensa VIP d\237a %d: %s.", dayIndex, description)))
 	player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[VIP] Recompensa VIP del d\237a %d: %s.", dayIndex, description))
 	player:getPosition():sendMagicEffect(CONST_ME_FIREWORK_YELLOW)
 	VipDailyReward.sendState(player)

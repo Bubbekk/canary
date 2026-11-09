@@ -648,7 +648,11 @@ return function(api)
 		local state = api.state.ensure(player, false)
 		local activeTask = state.bounty.tasks[1]
 		local bestiaryUnlocked = false
-		if type(player.isMonsterBestiaryUnlocked) == "function" then
+		-- Monsters without a bestiary entry (summons, event creatures, custom mobs) make
+		-- isMonsterBestiaryUnlocked raise "Monster race id not exists", so skip them.
+		local monsterType = monster and monster:getType()
+		local hasBestiary = monsterType and monsterType:Bestiaryclass() ~= ""
+		if hasBestiary and type(player.isMonsterBestiaryUnlocked) == "function" then
 			local checked, unlocked = pcall(player.isMonsterBestiaryUnlocked, player, tonumber(raceId))
 			bestiaryUnlocked = checked and unlocked == true
 		end
