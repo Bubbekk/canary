@@ -1,24 +1,15 @@
+-- Trainer rooms: every room has a glowing switch where the player stands and two
+-- static Training Machine spawns (see otservbr-custom-monster.xml), so this script
+-- only has to find a free room. Room X offsets come from the map: the last column
+-- is one tile wider than the others.
 local config = {
-	-- Position of the first position (line 1 column 1)
 	firstRoomPosition = { x = 1018, y = 1112, z = 7 },
-	-- X distance between each room (on the same line)
-	distancePositionX = 12,
-	-- Y distance between each room (on the same line)
+	columnOffsetsX = { 0, 12, 24, 36, 48, 60, 73 },
 	distancePositionY = 12,
-	-- Number of columns
-	columns = 7,
-	-- Number of lines
-	lines = 54,
+	lines = 53,
 }
 
-local function isBusyable(position)
-	local creature = Tile(position):getTopCreature()
-	if creature then
-		if creature:isPlayer() or creature:getMaster() then
-			return false
-		end
-	end
-
+local function isFree(position)
 	local tile = Tile(position)
 	if not tile then
 		return false
@@ -29,46 +20,38 @@ local function isBusyable(position)
 		return false
 	end
 
-	local items = tile:getItems()
-	for i = 1, tile:getItemCount() do
-		local item = items[i]
-		local itemType = item:getType()
-		if itemType:getType() ~= ITEM_TYPE_MAGICFIELD and not itemType:isMovable() and item:hasProperty(CONST_PROP_BLOCKSOLID) then
-			return false
-		end
-	end
-	return true
+	return tile:getCreatureCount() == 0
 end
 
-local function calculatingRoom(uid, position, column, line)
-	local player = Player(uid)
-	if column >= config.columns then
-		column = 0
-		line = line < (config.lines - 1) and line + 1 or false
-	end
-
-	if line then
-		local room_pos = { x = position.x + (column * config.distancePositionX), y = position.y + (line * config.distancePositionY), z = position.z }
-		if isBusyable(room_pos) then
-			player:teleportTo(room_pos)
-			player:getPosition():sendMagicEffect(CONST_ME_TELEPORT)
-		else
-			calculatingRoom(uid, position, column + 1, line)
+local function findFreeRoom()
+	local base = config.firstRoomPosition
+	for line = 0, config.lines - 1 do
+		for _, offsetX in ipairs(config.columnOffsetsX) do
+			local roomPosition = Position(base.x + offsetX, base.y + line * config.distancePositionY, base.z)
+			if isFree(roomPosition) then
+				return roomPosition
+			end
 		end
-	else
-		player:sendCancelMessage("Couldn't find any position for you right now.")
 	end
+	return nil
 end
 
 local trainerEntrance = MoveEvent()
 function trainerEntrance.onStepIn(creature, item, position, fromPosition)
-	if not creature:isPlayer() then
+	local player = creature:getPlayer()
+	if not player then
 		return true
 	end
 
-	calculatingRoom(creature.uid, config.firstRoomPosition, 0, 0)
-	Game.createMonster("Training Machine", creature:getPosition(), true, false)
-	Game.createMonster("Training Machine", creature:getPosition(), true, false)
+	local roomPosition = findFreeRoom()
+	if not roomPosition then
+		player:teleportTo(fromPosition, true)
+		player:sendCancelMessage("All training rooms are busy right now.")
+		return true
+	end
+
+	player:teleportTo(roomPosition)
+	roomPosition:sendMagicEffect(CONST_ME_TELEPORT)
 	return true
 end
 
